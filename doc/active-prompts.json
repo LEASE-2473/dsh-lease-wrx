@@ -1,0 +1,79 @@
+{
+  "prompts": [
+    {
+      "name": "system",
+      "path": "memory/system_memory/prompts/system.md",
+      "defaultSha256": "402d72311f1c3bb903cfc18c6a8081276bc47513845ee144bf14e24e63de6900"
+    },
+    {
+      "name": "update",
+      "path": "memory/system_memory/prompts/system_update.md",
+      "defaultSha256": "6a8befc34cf477e86d02138f483c5d567601a4c9ab76709feab44b14ce29129c"
+    },
+    {
+      "name": "diary",
+      "path": "memory/diaries/prompts/diary.md",
+      "defaultSha256": "5192e2c18cc9ed87e2949e473713296b7b8f40103e38a64f26a9ff758a74da4c"
+    },
+    {
+      "name": "diaryInstant",
+      "path": "memory/diaries/prompts/diary_instant.md",
+      "defaultSha256": "fe90f29a2767397850f99621c994a1d0578c3dad7ffdab5b85399e067484bade"
+    },
+    {
+      "name": "diaryMerge",
+      "path": "memory/diaries/prompts/diary_merge.md",
+      "defaultSha256": "d072f93bab41e7f0b85e708c6acad680a09f71913bd9187fddb6e52046415103"
+    },
+    {
+      "name": "activity",
+      "path": "memory/ai_notes/prompts/activity.md",
+      "defaultSha256": "58a141ba8fc8d328863a6a1ac509b179a66da76be666519b365aa691534c2990"
+    },
+    {
+      "name": "profile",
+      "path": "profile/user/prompts/profile_summary.md",
+      "defaultSha256": "29158c2eddd05afe7da50d6b992325fc4d33ff22ad2c311979954f3bdada989b"
+    },
+    {
+      "name": "selfProfile",
+      "path": "profile/assistant/prompts/profile_summary.md",
+      "defaultSha256": "a9f74cfa5343c9e1ad791f59860f1aeed134994a4802ace5bdfc00cdeeefecae"
+    },
+    {
+      "name": "skillPersona",
+      "path": "skills/prompts/persona.md",
+      "defaultSha256": "30cb752f7cf528c16e499af651a89f64c3febfe49479f4c9034d2101d8dbd00a"
+    },
+    {
+      "name": "skillUser",
+      "path": "skills/prompts/user.md",
+      "defaultSha256": "8017a8d1c6bf6b2863f8ae25be1e3e50ebc22c795a4045e9016c84a3c4260980"
+    },
+    {
+      "name": "skillMemory",
+      "path": "skills/prompts/memory.md",
+      "defaultSha256": "92ece39a476e1f3c7ea3f4aafa97674bda2c27427fcc944c2cd210aee267d8d9"
+    },
+    {
+      "name": "skillPreset",
+      "path": "skills/prompts/preset.md",
+      "defaultSha256": "af5e213d5356c397c0a59191bc094f5a521ce88fd259c4434bda77d8aa0311e0"
+    },
+    {
+      "name": "MERGE_INSTRUCTION",
+      "path": "memory/system_memory/prompts/merge.md",
+      "defaultSha256": "6aef9fc357997349b84583abbcaa1c8ec9f908fb74e9a25f79749596eba8194d"
+    },
+    {
+      "name": "DIARY_SEGMENT_INSTRUCTION",
+      "path": "memory/diaries/prompts/segment.md",
+      "defaultSha256": "0ad15133d93bf241ebdd576aef636ca706472b9118fbb3fac7fbe30792948b7a"
+    },
+    {
+      "name": "DIARY_MERGE_INSTRUCTION",
+      "path": "memory/diaries/prompts/daily_merge.md",
+      "defaultSha256": "bb1bd50e06433bfafbe42c14353c03305e77b2956ee0eb7b493732dd564410b3"
+    }
+  ]
+}

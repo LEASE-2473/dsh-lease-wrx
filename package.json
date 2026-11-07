@@ -1,0 +1,43 @@
+{
+  "name": "dsh-wrx-memory",
+  "version": "0.1.0",
+  "description": "WRX 多角色记忆与上下文编排插件：四表总结、日记、自主活动、画像、原生工具与请求抓包。",
+  "type": "module",
+  "main": "./app/index.js",
+  "exports": {
+    ".": "./app/index.js",
+    "./client": "./app/integrations/dsh/client.js",
+    "./package.json": "./package.json"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "inject": [
+        "@deepseek-ai/dsh-client-runtime",
+        "@deepseek-ai/dsh-client-ui-settings",
+        "@deepseek-ai/dsh-client-ui-settings-plugins"
+      ]
+    }
+  },
+  "files": [
+    "app",
+    "defaults",
+    "scripts/install-request-hook.mjs",
+    "scripts/install-pi-ai-capability.mjs",
+    "doc",
+    "cordis.patch.yml",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=22.16.0"
+  },
+  "license": "UNLICENSED",
+  "scripts": {
+    "init:data": "node scripts/initialize-data.mjs",
+    "check": "node scripts/verify-project.mjs",
+    "test": "node --test"
+  }
+}

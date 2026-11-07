@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>LEASE WRX · 预设编排</title>
+  <link rel="stylesheet" href="./editor.css">
+</head>
+<body>
+  <main id="editor">
+    <header>
+      <div><h1>预设与上下文编排</h1><p>拖动条目调整顺序；保存后用于下一轮新输入，工具续轮使用已有快照。</p></div>
+      <div class="actions"><button id="reload">重新读取</button><button id="save" class="primary">保存预设</button></div>
+    </header>
+    <p class="hint">WRX 预设集中管理，每份最多绑定一个角色；复用请手动复制。保存预设只更新本次编辑的内容，实际引用在角色看板保存。</p>
+    <p id="ownership" role="status"></p><button id="switch-owner" hidden>切换管理角色</button>
+    <div id="notice" role="status" aria-live="polite">正在读取预设…</div>
+    <details class="takeover" aria-labelledby="takeover-title"><summary>请求编排</summary>
+      <label class="inline"><input id="enabled" type="checkbox">启用 LEASE WRX 统一编排</label>
+      <label>历史窗口 <select id="history-mode"><option value="turns">最近 N 次用户输入</option><option value="duration">最近固定时长</option><option value="since">从固定时间点开始</option></select></label>
+      <label id="history-turns-field">保留用户输入次数 <input id="history-turns" type="number" min="0" max="10000" value="30"></label>
+      <label id="history-duration-field" hidden>最近多少分钟 <input id="history-duration" type="number" min="1" max="525600" value="60"></label>
+      <label id="history-since-field" hidden>起始时间（本地时区） <input id="history-since" type="datetime-local"></label>
+      <label class="inline"><input id="timestamps-enabled" type="checkbox">在真实用户消息前显示原始时间</label>
+      <label>消息时间时区 <input id="timestamps-zone" type="text" placeholder="Asia/Shanghai"></label>
+      <label>历史中间的系统消息 <select id="mid-system"><option value="preserve">保留原角色与位置</option><option value="user">转为 user 角色以兼容消息顺序</option></select></label>
+      <p class="hint">部分供应商会把中间的系统消息合并到开头。选择转为 user 可避免系统消息合并，但会降低这些条目的指令优先级；仍需核验供应商最终请求。</p>
+      <p><a href="/plugins/dsh-wrx-memory/ui#compat" target="_blank" rel="noopener">打开【兼容性】· OpenCode Go 中间 system 补丁</a> · <a href="./inspector.html" target="_blank" rel="noopener">打开请求抓包工具</a></p>
+      <button id="save-config">保存当前角色的启用与历史设置</button>
+      <p id="history-window-summary" aria-live="polite"></p>
+      <p class="hint">按输入次数仅使用当前会话。按起始时间或最近时长取时间段内同角色各会话内容：当前会话保留工具轨迹，其他会话仅提供带来源和时间的对话文本。</p>
+      <p class="hint">当前会话压缩后，摘要替代其覆盖的旧消息，按覆盖结束时间进入历史窗口；不会混入运行背景。原始 chatlog 保留供后台总结，其他会话不受影响。</p>
+      <p id="hook-status">正在检查接管入口…</p>
+    </details>
+    <section class="toolbar" aria-label="预设管理">
+      <label class="grow">当前预设 <select id="preset-select"></select></label>
+      <button id="add-preset">新建</button><button id="clone-preset">复制</button><button id="delete-preset">删除预设</button>
+      <button id="export">导出 JSON</button><button id="import">导入 JSON</button>
+      <input id="import-file" type="file" accept="application/json,.json" hidden>
+    </section>
+    <section class="preset-meta">
+      <label class="grow">预设名称 <input id="preset-name" autocomplete="off"></label>
+      <span id="entry-count"></span>
+    </section>
+    <details class="preview-panel" aria-label="对话生成参数"><summary>对话生成参数（随预设保存）</summary>
+      <label class="inline"><input id="generation-enabled" type="checkbox">覆盖主对话温度；关闭则跟随 DSH</label>
+      <label>温度 temperature（0–2）<input id="generation-temperature" type="number" min="0" max="2" step="any" placeholder="自定义数值"></label>
+      <p class="hint">温度越高，措辞通常越多样。仅在统一编排开启时用于主对话，后台记忆任务与子 Agent 保持各自设置。工具续轮沿用本轮快照，保存后下一轮新输入生效。可复制一份聊天预设，工作时切回原预设并保存。</p>
+      <p class="hint">频率惩罚 frequency_penalty、存在惩罚 presence_penalty：当前 DSH pi-ai 适配器未透传，暂不提供输入。DeepSeek 官方说明思考模式会忽略温度；第三方代理和其他模型以实际支持为准。留存的旧温度需勾选后才启用。</p>
+    </details>
+    <details class="preview-panel" aria-label="DSH 提示词减法"><summary>DSH 原生提示词 · 查看原文与添加删除规则</summary>
+      <p>勾选分块会在列表顶部添加【删除】条目，也可以直接点击“＋删除条目”手填目标。编排时命中就删除，不存在就跳过；不绑定 DSH Agent preset，也不要求使用全文模式。</p>
+      <button id="use-dsh-full">添加 DSH 全文条目</button>
+      <p class="hint">全文按原顺序合并为一条消息。实际工具的名称、用途描述和参数通过 API tools 提供，无需另加工具目录消息。删除规则同时支持全文与原来的三个组合，可关闭全文后切回组合，规则继续生效。</p>
+      <p id="dsh-full-status" role="status"></p>
+      <p class="hint">启用的全文条目可以在下方列表拖动。全文生效时，旧「DSH预设正文／工具说明／技能说明」及 DSH 独立提示词入口自动跳过。常用内容不再补齐工具目录；旧预设已保存的目录条目仍由其开关控制，可手动删除以避免重复发送。</p>
+      <p class="hint">下方原文来自最近一次经过 WRX 的 DSH 请求，并非所有 Agent preset 的静态配置。切换 DSH Agent preset 后，先发送一次新输入，再点“重新读取”。时间背景、历史消息、原生技能目录消息及 API tools 不属于此全文。</p>
+      <div id="dsh-section-list"></div>
+      <details><summary>剔除后的完整正文预览</summary><pre id="dsh-full-preview"></pre></details>
+    </details>
+    <section class="toolbar" aria-label="添加提示词">
+      <button id="add-entry">＋普通条目</button>
+      <button id="add-delete-entry">＋删除条目</button>
+      <button id="add-dsh-slots">补齐常用内容（DSH＋记忆）</button>
+      <label class="grow">选择自动填充的内容 <select id="macro-select"></select></label>
+      <button id="add-source">＋加入所选内容</button>
+    </section>
+    <p id="macro-description" class="hint"></p>
+    <p class="hint">【删除】条目统一作用于本轮编排，放在顶部或末尾都有效。支持按 DSH 分块名删除整块，或精确删除提示词中的原文；不改用户输入、历史、时间背景、工具结果或实际工具参数。可在编排预览的 trace 中查看 matches 命中次数。</p>
+    <p class="hint">所有条目从上到下发送，旧深度设置不再参与排序。新增条目会出现在末尾并自动定位。保存预设后，在下一轮新输入生效。</p>
+    <details class="preview-panel" id="usage-guide">
+      <summary>使用说明 · 不用懂宏，也能排列上下文</summary>
+      <p>① 自己写规则：点“＋普通条目”，填写正文。② 加入动态资料：选择中文内容，点“＋加入所选内容”，无需填写正文或插入宏。③ 拖动排序，预览后保存预设；首次使用还要启用统一编排并保存编排设置。</p>
+      <p>推荐顺序：固定规则 → DSH工具/技能等内容 → 热日记 → 历史对话 → 用户信息与画像、助手信息与画像、动态记忆、召回 → 本次用户输入。每项都是独立内容块，可以移到后面。</p>
+      <p>历史对话就是上方历史窗口筛选出的消息。最近N次只取当前会话；时间范围取同角色各会话，其他会话只含对话文本。当前输入不属于历史；建议把“本次用户输入”放在最后，未添加时系统会自动保留。</p>
+      <p>旧 Chat History 默认包含历史＋本次输入。要把画像放在两者之间，请在它的“这条发送什么”选择“历史对话”，再把画像和“本次用户输入”依次放在后面。不要再添加第二份历史。</p>
+      <p>旧 Character Definitions 对应助手信息与画像，User Definitions 对应用户信息与画像，并非无用；可直接拖到后面，或用中文来源替换。World Info Before/After 当前没有默认内容提供，可关闭。旧标记正文不参与发送。</p>
+      <p>五项独立来源：用户信息（静态）、用户画像（动态·完整）、用户画像（动态·匹配）、角色信息（静态）、角色画像（动态·完整）。信息放前面，画像可放历史后面。旧User/Character Definitions仍是组合，请改选静态信息，再单独添加画像，避免重复。</p>
+      <p>完整模式确实发送全部画像；用户匹配模式由代码检查当前及上一条用户输入中的关键词，只发送命中条目，无命中不发送，不夹带称呼和常驻信息。用户两种画像按需选一种。角色画像目前只有完整模式，没有匹配功能。“动态”表示每轮新输入读取最新资料，工具续轮沿用快照。</p>
+      <p>动态记忆旧组合仍包含静态用户资料、匹配画像、四表热记忆、外出与AI笔记；使用独立项时请关闭旧组合以免重复。信息的“静态”表示资料类别，人工修改后下一轮仍会更新。</p>
+      <p>“补齐常用内容”添加八项建议内容，不是全部必需项；已存在（包括关闭）的项不会重复添加。DSH独立内容在宿主收到请求后才能被发现，重新读取可更新目录。真正工具参数仍由模型协议发送。</p>
+      <p>高级用法：普通正文可插动态变量，例如“现在是 {{current_time}}”。选择自动内容来源后无需再插变量；历史和本次输入只能独占条目。预览不调用模型，缺失素材会提示；供应商可能合并system消息，上方兼容设置可调整。</p>
+    </details>
+    <div id="entries" aria-label="提示词条目列表"></div>
+    <details class="preview-panel"><summary>编排预览</summary>
+      <p class="hint">使用当前未保存的编辑内容；预览不会发送模型请求。未提供的运行时素材以引擎提示为准。</p>
+      <label>本轮用户输入 <textarea id="preview-user" rows="2">这是一条用于检查编排顺序的用户消息。</textarea></label>
+      <details><summary>历史消息测试数据（JSON 数组，可选）</summary><textarea id="preview-history" rows="4">[]</textarea></details>
+      <button id="preview">预览实际编排</button>
+      <div id="preview-summary" role="status"></div>
+      <pre id="preview-result" tabindex="0"></pre>
+    </details>
+  </main>
+  <script type="module" src="./editor.js"></script>
+</body>
+</html>

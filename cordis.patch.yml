@@ -1,0 +1,5 @@
+# dsh-wrx-memory bundle 层：插入记忆管理插件行。
+- insert:
+    - id: dsh-wrx-memory
+      name: 'dsh-wrx-memory'
+      config: {}

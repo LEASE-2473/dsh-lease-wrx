@@ -1,0 +1,27 @@
+# 运行资料与个人资产不得进入 Git；defaults 仅保存空预设库及通用系统提示词。
+/data/
+/node_modules/
+/backups/
+/logs/
+*.sqlite
+*.sqlite3
+*.sqlite-*
+*.sqlite3-*
+*.db
+*.db-*
+*.bak*
+*.wrx-backup*
+.env
+.env.*
+!.env.example
+*.tgz
+
+/private-assets/
+
+# 私人评审附件不进入公开源码。
+/tests/LEASE sandboxreview/
+
+# 本地测试和开发连续性记录不纳入公共源码提交。
+/tests/
+/PROJECT_CONTEXT.md
+/CODEX_CHANGELOG.md

@@ -1,0 +1,1647 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>DS 记忆</title>
+<style>
+  :root {
+    --bg: #14161c;
+    --panel: #1b1e26;
+    --panel2: #22262f;
+    --line: #2e333d;
+    --text: #e6e8ee;
+    --dim: #9aa2b1;
+    --accent: #7c9cff;
+    --warn: #f0b45a;
+    --bad: #ef6b6b;
+    --ok: #57c98a;
+    --radius: 10px;
+    color-scheme: dark;
+  }
+  :root[data-theme="light"] {
+    --bg: #ffffff;
+    --panel: #f6f7f9;
+    --panel2: #eceff4;
+    --line: #d9dde5;
+    --text: #1b1f27;
+    --dim: #5b6472;
+    --accent: #3b5bdb;
+    --warn: #a86400;
+    --bad: #c62828;
+    --ok: #1e7f4b;
+    color-scheme: light;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font: 13px/1.55 "Segoe UI", "Microsoft YaHei", system-ui, sans-serif;
+    padding: 14px 16px 20px;
+  }
+  header { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; }
+  .brand { font-size: 15px; font-weight: 600; letter-spacing: .5px; }
+  .brand small { color: var(--dim); font-weight: 400; margin-left: 6px; }
+  .chip {
+    border: 1px solid var(--line); background: var(--panel); color: var(--dim);
+    padding: 4px 10px; border-radius: 999px; cursor: pointer; font-size: 12px;
+  }
+  .chip.on { border-color: var(--accent); color: var(--text); background: rgba(124,156,255,.14); }
+  .spacer { flex: 1; }
+  button {
+    border: 1px solid var(--line); background: var(--panel2); color: var(--text);
+    padding: 5px 12px; border-radius: 7px; cursor: pointer; font-size: 12px;
+  }
+  button:hover { border-color: var(--accent); }
+  button.primary { background: rgba(124,156,255,.18); border-color: var(--accent); }
+  button.danger { border-color: rgba(239,107,107,.5); color: #ffb3b3; }
+  button:disabled { opacity: .45; cursor: not-allowed; }
+  nav { display: flex; gap: 2px; border-bottom: 1px solid var(--line); margin-bottom: 14px; }
+  nav button {
+    border: 0; border-bottom: 2px solid transparent; border-radius: 0; background: transparent;
+    color: var(--dim); padding: 7px 14px;
+  }
+  nav button.on { color: var(--text); border-bottom-color: var(--accent); }
+  .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; margin-bottom: 16px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px 14px; }
+  .card h3 { margin: 0 0 6px; font-size: 14px; }
+  .card .meta { color: var(--dim); font-size: 12px; }
+  .stats { display: flex; gap: 14px; margin-top: 8px; flex-wrap: wrap; }
+  .stat b { display: block; font-size: 18px; font-weight: 600; }
+  .stat span { color: var(--dim); font-size: 11px; }
+  h2.sec { font-size: 13px; color: var(--dim); font-weight: 500; margin: 18px 0 8px; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--dim); font-weight: 500; font-size: 11px; }
+  td.actions { white-space: nowrap; text-align: right; }
+  td.actions button { padding: 2px 8px; font-size: 11px; }
+  .tag { display: inline-block; padding: 1px 7px; border-radius: 999px; font-size: 11px; border: 1px solid var(--line); color: var(--dim); }
+  .tag.hot { color: #ffd39b; border-color: rgba(240,180,90,.4); }
+  .tag.cold { color: #9cc6ff; border-color: rgba(124,156,255,.4); }
+  .tag.ok { color: var(--ok); border-color: rgba(87,201,138,.4); }
+  .tag.bad { color: var(--bad); border-color: rgba(239,107,107,.4); }
+  .muted { color: var(--dim); }
+  .mono { font-family: ui-monospace, Consolas, monospace; font-size: 11px; color: var(--dim); }
+  .field { margin-bottom: 12px; }
+  .field label { display: block; color: var(--dim); font-size: 12px; margin-bottom: 4px; }
+  input[type=text], input[type=password], input[type=number], input[type=date], select, textarea {
+    width: 100%; background: var(--panel); border: 1px solid var(--line); color: var(--text);
+    border-radius: 7px; padding: 7px 9px; font: inherit;
+  }
+  textarea { min-height: 120px; resize: vertical; font-family: ui-monospace, Consolas, monospace; font-size: 12px; line-height: 1.5; }
+  input:disabled, textarea:disabled, select:disabled { opacity: .55; }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 14px; }
+  .panel h3 { margin: 0 0 4px; font-size: 13px; }
+  .panel p.hint { color: var(--dim); font-size: 12px; margin: 4px 0 12px; }
+  .check { display: flex; align-items: center; gap: 8px; color: var(--text); }
+  .check input { width: auto; }
+  .diary { border: 1px solid var(--line); border-radius: var(--radius); padding: 12px 14px; margin-bottom: 10px; background: var(--panel); }
+  .diary h4 { margin: 0 0 2px; font-size: 13px; }
+  .diary .body { margin-top: 8px; white-space: pre-wrap; color: #cfd4de; }
+  .chip-cold, .chip-hot, .chip-auto { display: inline-block; font-size: 11px; line-height: 16px; padding: 0 7px; border-radius: 999px; margin-left: 4px; vertical-align: middle; }
+  .chip-cold { border: 1px solid rgba(120,160,255,.55); color: #8fb0ff; background: rgba(120,160,255,.12); }
+  .chip-hot { border: 1px solid rgba(120,230,160,.45); color: #7fe0a0; background: rgba(120,230,160,.1); }
+  .chip-pending { border: 1px solid rgba(255,200,100,.55); color: #ffcf7a; background: rgba(255,200,100,.12); }
+  .chip-freeze { border: 1px solid rgba(160,160,170,.5); color: #a8a8b4; background: rgba(160,160,170,.1); }
+  .chip-auto { border: 1px solid var(--line); color: var(--dim); background: transparent; }
+  .empty { color: var(--dim); padding: 26px 0; text-align: center; }
+  .skill-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+  .skill-row:last-child { border-bottom: 0; }
+  .skill-row b { font-size: 13px; }
+  .skill-row .muted { font-size: 12px; }
+  .skill-row select { width: auto; min-width: 96px; }
+  pre { background: var(--panel2); border: 1px solid var(--line); border-radius: 8px; padding: 10px; }
+  #toast {
+    position: fixed; left: 50%; bottom: 26px; transform: translateX(-50%);
+    background: #262b36; border: 1px solid var(--line); color: var(--text);
+    padding: 8px 16px; border-radius: 8px; opacity: 0; pointer-events: none; transition: opacity .18s;
+    max-width: 80vw; z-index: 50;
+  }
+  #toast.show { opacity: 1; }
+  #toast.err { border-color: rgba(239,107,107,.6); }
+  dialog {
+    background: var(--panel); color: var(--text); border: 1px solid var(--line);
+    border-radius: 12px; padding: 18px 20px; width: min(680px, 92vw);
+  }
+  dialog::backdrop { background: rgba(0,0,0,.55); }
+  dialog h3 { margin: 0 0 12px; font-size: 14px; }
+  .dlg-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
+  .flex { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .split { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
+  .split .spacer { flex: 1; }
+  @media (max-width: 820px) {
+    .preset-table th:nth-child(3), .preset-table td:nth-child(3),
+    .preset-table th:nth-child(4), .preset-table td:nth-child(4) { display: none; }
+  }
+  /* ---- 用户画像：标签胶囊，点开才编辑 ---- */
+  .entry-chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 2px 0 12px; }  .entry-chip {
+    --chip: var(--accent);
+    border: 1px solid color-mix(in srgb, var(--chip) 55%, var(--line));
+    background: color-mix(in srgb, var(--chip) 14%, transparent);
+    color: color-mix(in srgb, var(--chip) 82%, var(--text));
+    border-radius: 999px; padding: 5px 14px; font-size: 12.5px; cursor: pointer;
+  }
+  .entry-chip:hover { border-color: var(--chip); }
+  .entry-chip.on { box-shadow: 0 0 0 2px color-mix(in srgb, var(--chip) 45%, transparent); }
+  .entry-chip.add { border-style: dashed; color: var(--dim); background: transparent; }
+  .entry-editor { display: none; border: 1px solid var(--line); border-radius: 10px; padding: 12px; background: var(--panel2); margin-bottom: 10px; }
+  .entry-editor.on { display: block; }
+  .entry-editor .entry-head { display: flex; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+  .entry-editor .entry-head input[type=text] { width: auto; flex: 1; min-width: 160px; }
+  .entry-editor .entry-head input#ent-tag { max-width: 220px; font-weight: 600; }
+  .entry-editor textarea {
+    font-family: "Segoe UI", "Microsoft YaHei", system-ui, sans-serif;
+    font-size: 12.5px; min-height: 90px; line-height: 1.6;
+  }
+  .io-box { display: none; margin-top: 10px; border: 1px dashed var(--line); border-radius: 8px; padding: 12px; background: var(--panel2); }
+  .io-box.on { display: block; }
+  .io-box .flex { margin-top: 8px; }
+.selected-role { outline: 2px solid #819cff; } button.card { color: inherit; text-align: left; cursor: pointer; }
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">DS 记忆<small>DSH · 人设与记忆</small></div>
+  <div class="spacer"></div>
+  <button onclick="window.open('/plugins/dsh-wrx-memory/ui', 'lease-wrx-settings', 'popup,width=1280,height=900,noopener')">独立窗口 ↗</button>
+  <button id="btn-summary" class="primary" title="从上次进度继续，按周期补总结">立即总结</button>
+  <button id="btn-refresh">刷新</button>
+</header>
+
+<nav id="tabs"></nav>
+<main id="view"><div class="empty">加载中…</div></main>
+<div id="toast"></div>
+
+<dialog id="dlg">
+  <h3 id="dlg-title">编辑</h3>
+  <div id="dlg-body"></div>
+  <div class="dlg-actions">
+    <button id="dlg-cancel">取消</button>
+    <button id="dlg-save" class="primary">保存</button>
+  </div>
+</dialog>
+
+<script>
+(function detectTheme() {
+  const root = document.documentElement;
+  const apply = () => {
+    let theme = 'dark';
+    try {
+      if (window.parent && window.parent !== window) {
+        const doc = window.parent.document;
+        const pRoot = doc.documentElement;
+        const pBody = doc.body;
+        const bg = (pBody && getComputedStyle(pBody).backgroundColor) || '';
+        const m = bg.match(/rgba?\(\s*(\d+)[,\s]+(\d+)[,\s]+(\d+)/);
+        const flags = [pRoot.dataset.theme, pRoot.dataset.colorScheme, pRoot.className, getComputedStyle(pRoot).colorScheme].join(' ');
+        if (m) theme = (0.299 * +m[1] + 0.587 * +m[2] + 0.114 * +m[3]) < 128 ? 'dark' : 'light';
+        else if (/dark/i.test(flags)) theme = 'dark';
+        else if (/light/i.test(flags)) theme = 'light';
+      }
+    } catch { /* 跨域或独立打开时用默认深色 */ }
+    root.dataset.theme = theme;
+  };
+  apply();
+  try {
+    if (window.parent && window.parent !== window) {
+      new MutationObserver(apply).observe(window.parent.document.documentElement, { attributes: true, attributeFilter: ['class', 'data-theme', 'data-color-scheme', 'style'] });
+    }
+  } catch { /* ignore */ }
+})();
+
+const API = '/plugins/dsh-wrx-memory/api';
+const S = {
+  config: null,
+  characters: [],
+  batches: [],
+  char: '',
+  tab: location.hash === '#compat' ? 'compat' : 'overview',
+  kind: '',
+  rows: [],
+  diaries: [],
+  activity: [],
+  user: null,
+  prompts: null,
+  providers: [],
+  defaultSelection: null,
+  busy: false,
+  dialogMode: null,
+  editingIdx: -1,
+};
+
+const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const fmt = (v) => {
+  if (!v) return '—';
+  const d = new Date(v);
+  if (Number.isNaN(d.getTime())) return esc(v);
+  return d.toLocaleString('zh-CN', { hour12: false });
+};
+const short = (v, n = 90) => {
+  const s = String(v ?? '').replace(/\s+/g, ' ').trim();
+  return s.length > n ? s.slice(0, n) + '…' : s;
+};
+const kindLabel = { summary: '概要', person: '人物', item: '物品', agreement: '约定' };
+const kindOfId = (id) => String(id || '').split(':')[0];
+
+function toast(message, isError) {
+  const el = document.getElementById('toast');
+  el.textContent = message;
+  el.className = 'show' + (isError ? ' err' : '');
+  clearTimeout(toast.timer);
+  toast.timer = setTimeout(() => { el.className = ''; }, isError ? 6000 : 2800);
+}
+
+function setVectorState(id, text, isError) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = text;
+  el.style.color = isError ? '#ff7b72' : '';
+}
+
+async function api(path, options = {}) {
+  if (S.char && !path.startsWith('/roles') && !path.startsWith('/agent-presets')) path += (path.includes('?') ? '&' : '?') + 'character=' + encodeURIComponent(S.char);
+  const res = await fetch(API + path, {
+    headers: { 'content-type': 'application/json' },
+    ...options,
+    body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
+  });
+  let data;
+  try { data = await res.json(); } catch { throw new Error('接口返回不是 JSON（HTTP ' + res.status + '）'); }
+  if (!data || data.ok !== true) throw new Error(data?.error || ('HTTP ' + res.status));
+  return data;
+}
+
+function currentCharacter() {
+  return S.characters.find((c) => c.id === S.char) || null;
+}
+
+window.addEventListener('hashchange', () => {
+  if (location.hash === '#compat') { S.tab = 'compat'; renderTabs(); reloadTab(); }
+});
+
+function renderTabs() {
+  const tabs = [
+    ['overview', '角色看板'], ['userpersona', '用户信息'], ['persona', '角色信息'], ['presets', '预设'], ['memory', '系统记忆'], ['diary', '日记'], ['activity', '自主活动'],
+    ['skills', '技能'], ['settings', '设置'], ['compat', '兼容性'],
+  ];
+  document.getElementById('tabs').innerHTML = tabs.map(([id, label]) =>
+    `<button class="${S.tab === id ? 'on' : ''}" data-act="tab" data-id="${id}">${label}</button>`).join('');
+}
+
+async function reloadState() {
+  const data = await api('/state');
+  S.config = data.config;
+  S.characters = data.characters;
+  S.roles = data.roles || [];
+  S.characters = S.characters.map(c => ({ ...c, ...S.roles.find(r => r.id === c.id) }));
+  S.batches = data.batches;
+  renderRoleCards();
+  if (!S.char || !S.characters.some((c) => c.id === S.char)) {
+    const withMemory = S.characters.find((c) => c.counts && (c.counts.summary + c.counts.person + c.counts.item + c.counts.agreement) > 0);
+    S.char = (withMemory || S.characters.find(c => c.id !== 'default') || S.characters[0] || {}).id || '';
+    renderRoleCards();
+  }
+}
+
+async function reloadTab() {
+  const view = document.getElementById('view');
+  try {
+    if (S.char === 'default' && S.tab !== 'overview') { view.innerHTML = '<div class="empty">Default角色不启用该功能</div>'; return; }
+    if (S.tab === 'overview') await renderOverview();
+    else if (S.tab === 'persona') await renderCharacter();
+    else if (S.tab === 'userpersona') await renderUserPersona();
+    else if (S.tab === 'presets') await renderPresets();
+    else if (S.tab === 'memory') await renderMemory();
+    else if (S.tab === 'diary') await renderDiary();
+    else if (S.tab === 'activity') await renderActivity();
+    else if (S.tab === 'skills') await renderSkills();
+    else if (S.tab === 'settings') await renderSettings();
+    else if (S.tab === 'compat') await renderCompat();
+  } catch (error) {
+    view.innerHTML = `<div class="empty">加载失败：${esc(error.message)}</div>`;
+  }
+}
+
+/* ---------- 概览 ---------- */
+
+function renderRoleCards() {
+  let root = document.getElementById('role-cards');
+  if (!root) { root = document.createElement('div'); root.id = 'role-cards'; document.getElementById('tabs').after(root); }
+  const cards = S.characters.map((c) => {
+    const n = c.counts || {};
+    return `<button type="button" class="card ${S.char === c.id ? 'selected-role' : ''}" data-act="select-role" data-id="${esc(c.id)}" aria-pressed="${S.char === c.id}">
+      <h3>${esc(c.name)} <span class="mono">${esc(c.id)}</span></h3>
+      <div class="meta">称呼：${esc(c.user_name || '—')}</div>
+      <div class="stats">
+        <div class="stat"><b>${n.summary || 0}</b><span>概要</span></div>
+        <div class="stat"><b>${n.person || 0}</b><span>人物</span></div>
+        <div class="stat"><b>${n.item || 0}</b><span>物品</span></div>
+        <div class="stat"><b>${n.agreement || 0}</b><span>约定</span></div>
+        <div class="stat"><b>${n.cold || 0}</b><span>冷记录</span></div>
+      </div>
+    </button>`;
+  }).join('');
+  root.innerHTML = '<div class="cards">' + cards + '<button data-act="create-role">＋新建角色</button></div><p class="hint">仅切换插件查看与设置对象；会话角色由 DSH Agent Preset 决定。Default 始终使用 DSH 原生上下文。</p>';
+}
+
+async function renderOverview() {
+  const view = document.getElementById('view');
+  const cfg = S.config || {};
+  const batchRows = (S.batches || []).filter(b => b.character_id === S.char).slice(0, 24).map((b) => {
+    const cls = b.status === 'done' ? 'ok' : b.status === 'error' ? 'bad' : '';
+    const chars = S.characters.find((c) => c.id === b.character_id);
+    return `<tr>
+      <td>${esc(chars ? chars.name : b.character_id)}</td>
+      <td class="mono">${fmt(b.range_start)}<br>${fmt(b.range_end)}</td>
+      <td><span class="tag ${cls}">${esc(b.status)}</span>${b.error ? `<div class="mono">${esc(short(b.error, 120))}</div>` : ''}</td>
+    </tr>`;
+  }).join('');
+  view.innerHTML = `
+    <div class="panel" id="role-binding">
+      <h3>${esc(currentCharacter()?.name || S.char)} · Agent Preset 绑定</h3>
+      <p class="hint">一个角色可绑定多个 Preset；一个 Preset 只能属于一个角色。未绑定自动归入 Default。</p>
+      <div id="preset-bindings">正在读取 DSH Preset…</div>
+      ${S.char === 'default' ? '' : '<label>WRX 编排预设 <select id="role-wrx-preset"></select></label><p class="hint">模板集中保存，每份只能绑定一个角色，复用请先复制。此处保存WRX启用、宿主绑定与模板引用；正文与温度在预设页保存，历史设置在预设页单独保存。一个 DSH Preset 固定对应一个角色，需要其他角色请复制 Preset。</p>'}
+      <label><input type="checkbox" id="role-enabled" ${currentCharacter()?.enabled ? 'checked' : ''} ${S.char === 'default' ? 'disabled' : ''}>启用 WRX 上下文编排与记忆采集</label>
+      <button data-act="save-role-binding">保存绑定</button>
+    </div>
+    ${S.char === 'default' ? '<div class="empty">Default角色不启用该功能</div>' : `<div class="panel">
+      <h3>自动总结</h3>
+      <p class="hint">当前：${cfg.summary?.enabled ? '已启用' : '未启用'} · 周期 ${cfg.summary?.intervalMinutes || 60} 分钟 · 模型 ${esc(cfg.llm?.mode === 'endpoint' ? (cfg.llm?.baseURL + ' / ' + cfg.llm?.model) : (cfg.llm?.provider + ' / ' + cfg.llm?.model))}</p>
+      <p class="hint">向量召回与重排：${cfg.vector?.enabled ? '已启用' : '未启用（配置已保留，等上下文注入方案确定后再开）'}</p>
+    </div>
+    <h2 class="sec">最近批次</h2>
+    ${batchRows ? `<table><thead><tr><th>角色</th><th>范围</th><th>状态</th></tr></thead><tbody>${batchRows}</tbody></table>` : '<div class="empty">还没有总结批次</div>'}`}`;
+  await renderBindings();
+}
+
+async function renderBindings() {
+  const [data, catalog] = await Promise.all([api('/agent-presets'), S.char === 'default' ? null : api('/presets')]);
+  const role = currentCharacter();
+  const selector = document.getElementById('role-wrx-preset');
+  if (selector) {
+    selector.innerHTML = (catalog?.state?.presets || []).map(preset => `<option value="${esc(preset.id)}">${esc(preset.name)}</option>`).join('');
+    selector.value = role?.wrxPresetId || catalog?.state?.active_preset_id || '';
+  }
+  const presets = new Map((data.presets || []).map(p => [p.id, p]));
+  for (const r of S.roles || []) for (const id of r.presetIds || []) if (!presets.has(id)) presets.set(id, { id, name: id + '（宿主暂不可用）' });
+  document.getElementById('preset-bindings').innerHTML = [...presets.values()].map(p => {
+    const owner = (S.roles || []).find(r => r.id !== S.char && r.presetIds.includes(p.id));
+    return `<label style="display:block"><input type="checkbox" name="bound-preset" value="${esc(p.id)}" ${role?.presetIds?.includes(p.id) ? 'checked' : ''} ${owner ? 'disabled' : ''}>${esc(p.name || p.id)} <span class="hint">${esc(p.id)}${owner ? ' · 已绑定 ' + esc(owner.name) : ''}</span></label>`;
+  }).join('') || '<p class="hint">宿主未提供 Agent Preset 列表；接入 DSH 后可在此绑定。</p>';
+}
+
+/* ---------- 人设与预设提示词 ---------- */
+
+const CHAR_FIELDS = [
+  ['name', '角色名'],
+  ['user_name', '对用户的称呼'],
+  ['personality', '性格'],
+  ['background', '背景'],
+  ['relationship', '关系'],
+  ['speaking_style', '说话风格'],
+];
+const CHAR_LONG = [
+  ['system_prompt', '设定 / system prompt'],
+  ['persona', '人设补充'],
+];
+
+/* ---------- 用户画像：标签胶囊 + 点开编辑 ---------- */
+
+const CHIP_COLORS = ['#7c9cff', '#57c98a', '#f0b45a', '#c792ea', '#4dd0e1', '#ef6b6b', '#9ccc65', '#ba68c8', '#ffd54f', '#4db6ac'];
+const chipColor = (i) => CHIP_COLORS[((i % CHIP_COLORS.length) + CHIP_COLORS.length) % CHIP_COLORS.length];
+
+function renderEntryChips(entries, which = 'user') {
+  const box = document.getElementById(which === 'self' ? 'self-chips' : 'entry-chips');
+  if (!box) return;
+  const list = Array.isArray(entries) ? entries : [];
+  const on = S.editingWhich === which ? S.editingIdx : -1;
+  box.innerHTML = list.map((e, i) =>
+    `<button class="entry-chip${on === i ? ' on' : ''}" data-act="edit-entry" data-idx="${i}" data-which="${which}" style="--chip:${chipColor(i)}">${esc(e.tag || '（未命名）')}</button>`
+  ).join('') + `<button class="entry-chip add" data-act="add-entry" data-which="${which}">＋ 新标签</button>`;
+  const head = document.getElementById(which === 'self' ? 'self-count' : 'entry-count');
+  if (head) head.textContent = list.length + ' 个标签';
+}
+
+/** 打开某一条的编辑器；idx < 0 表示新建 */
+function openEntryEditor(entries, idx, which = 'user') {
+  const list = Array.isArray(entries) ? entries : [];
+  const isNew = idx < 0;
+  const e = isNew ? { tag: '', keywords: [], content: '' } : (list[idx] || { tag: '', keywords: [], content: '' });
+  S.editingIdx = isNew ? list.length : idx;
+  S.editingWhich = which;
+  const box = document.getElementById(which === 'self' ? 'self-editor' : 'entry-editor');
+  if (!box) return;
+  box.classList.add('on');
+  box.innerHTML = `
+    <div class="entry-head">
+      <input type="text" id="ent-tag" value="${esc(e.tag || '')}" placeholder="标签（主题名）" />
+      <input type="text" id="ent-kw" value="${esc((Array.isArray(e.keywords) ? e.keywords : []).join('，'))}" placeholder="关键词，逗号分隔" />
+    </div>
+    <textarea id="ent-content" placeholder="这一条要记住的具体事实">${esc(e.content || '')}</textarea>
+    <div class="flex">
+      <button class="primary" data-act="entry-save">存到这一条</button>
+      <button data-act="entry-cancel">取消</button>
+      ${isNew ? '' : '<button class="danger" data-act="entry-del">删掉这条</button>'}
+    </div>`;
+  const ta = document.getElementById('ent-content');
+  if (ta) {
+    ta.style.height = 'auto';
+    ta.style.height = Math.min(ta.scrollHeight + 2, 420) + 'px';
+  }
+  renderEntryChips(list, which);
+}
+
+function closeEntryEditor(which) {
+  const w = which || S.editingWhich || 'user';
+  const box = document.getElementById(w === 'self' ? 'self-editor' : 'entry-editor');
+  if (box) { box.classList.remove('on'); box.innerHTML = ''; }
+  S.editingIdx = -1;
+  const list = (w === 'self' ? S.self?.entries : S.user?.entries) || [];
+  renderEntryChips(list, w);
+}
+
+/** 把编辑器内容写回 S.user.entries 或 S.self.entries */
+function commitEntryEditor() {
+  const which = S.editingWhich || 'user';
+  const owner = which === 'self' ? S.self : S.user;
+  const entries = Array.isArray(owner?.entries) ? [...owner.entries] : [];
+  const tag = (document.getElementById('ent-tag')?.value || '').trim();
+  const kw = (document.getElementById('ent-kw')?.value || '').split(/[,，\n]/).map((s) => s.trim()).filter(Boolean);
+  const content = (document.getElementById('ent-content')?.value || '').trim();
+  if (!tag && !content) throw new Error('标签和正文都空着，没东西可存');
+  const idx = S.editingIdx;
+  const item = { tag, keywords: kw, content };
+  if (idx >= entries.length) entries.push(item);
+  else entries[idx] = item;
+  owner.entries = entries;
+  return entries;
+}
+
+/** 整份 JSON → {name, core, entries}，容忍三种写法 */
+function parseUserJson(text) {
+  const data = JSON.parse(text);
+  if (Array.isArray(data)) return { entries: data };
+  if (data && Array.isArray(data.entries)) return data;
+  if (data && typeof data === 'object' && (data.name || data.core)) return { entries: [] };
+  throw new Error('认不出这个 JSON：要 {name,core,entries}、{entries:[…]} 或直接一个数组');
+}
+
+async function renderCharacter() {
+
+  const view = document.getElementById('view');
+  if (!S.char) { view.innerHTML = '<div class="empty">没有可用角色</div>'; return; }
+  const [ch, sf] = await Promise.all([
+    api('/character?character=' + encodeURIComponent(S.char)),
+    api('/self').catch(() => ({ self: null })),
+  ]);
+  S.character = ch.character || {};
+  S.self = sf?.self || S.self || { entries: [] };
+  const c = S.character;
+  const ss = S.self;
+  view.innerHTML = `
+    <div class="panel">
+      <h3>我的人设 · ${esc(c.name || 'DS')}</h3>
+      <p class="hint">这是我（DS）的样子。写在这里的内容会进预设的「角色定义」标记；也能让 DS 自己起草，草案不会自动写入。</p>
+      ${CHAR_FIELDS.map(([k, label]) => `<div class="field"><label>${label}</label><input type="text" id="c-${k}" value="${esc(c[k] || '')}" /></div>`).join('')}
+      ${CHAR_LONG.map(([k, label]) => `<div class="field"><label>${label}</label><textarea id="c-${k}" style="min-height:110px">${esc(c[k] || '')}</textarea></div>`).join('')}
+      <div class="flex">
+        <button class="primary" data-act="save-character">保存人设</button>
+        <button data-act="draft-persona">让 DS 起草</button>
+      </div>
+    </div>
+    <div class="panel">
+      <h3>角色画像</h3>
+<p class="hint">动态画像按标签整理；后台根据近期聊天更新，保存失败保留旧内容。</p>
+      <div class="split">
+        <b id="self-count">${(Array.isArray(ss.entries) ? ss.entries.length : 0)} 个标签</b>
+        <span class="spacer"></span>
+      </div>
+      <p class="hint">结构跟你的画像一样：标签 + 关键词 + 正文。关键词现在只是给我自己看、以后拿来做匹配用。</p>
+      <div class="entry-chips" id="self-chips"></div>
+      <div class="entry-editor" id="self-editor"></div>
+      <div class="flex">
+        <button class="primary" data-act="save-self">保存</button>
+      </div>
+    </div>`;
+  S.editingIdx = -1;
+  S.editingWhich = null;
+  renderEntryChips(Array.isArray(ss.entries) ? ss.entries : [], 'self');
+}
+
+/** 用户信息 · 只放 LEASE 这一份画像，跟角色信息分页（2026-10-26 LEASE 要求拆开） */
+async function renderUserPersona() {
+  const view = document.getElementById('view');
+  const data = await api('/user');
+  S.user = data.user || { name: '', core: '', entries: [] };
+  const uu = S.user;
+  view.innerHTML = `
+    <div class="panel">
+      <h3>你的人设 · ${esc(uu.name || '')}</h3>
+      <p class="hint">用户资料全局共享，切换角色不会复制或改变这份资料。</p>
+      <div class="field"><label>称呼</label><input type="text" id="user-name" value="${esc(uu.name)}" /></div>
+      <div class="field"><label>常驻信息（core，会一直注入；换行会保留）</label><textarea id="user-core" style="min-height:64px">${esc(uu.core)}</textarea></div>
+      <div class="split">
+        <b id="entry-count">${(Array.isArray(uu.entries) ? uu.entries : []).length} 个标签</b>
+        <span class="spacer"></span>
+        <button data-act="import-user">导入 JSON</button>
+        <button data-act="export-user">导出 JSON</button>
+      </div>
+      <p class="hint">点标签展开编辑（只展开你点的那一个）。关键词用逗号隔开，只有你在当前或上一轮说过、命中关键词，这一条才会被注入。</p>
+      <div class="entry-chips" id="entry-chips"></div>
+      <div class="entry-editor" id="entry-editor"></div>
+      <div class="io-box" id="user-io">
+        <label>整份 JSON（导入：粘进来或选文件；导出：生成在这里）</label>
+        <textarea id="user-io-text" placeholder='支持三种格式：{"name","core","entries"} / {"entries":[…] } / 直接一个数组'></textarea>
+        <div class="flex">
+          <input type="file" id="user-io-file" accept=".json,application/json" style="width:auto" />
+          <button data-act="io-apply">解析并填入</button>
+          <button data-act="io-copy">复制</button>
+          <button data-act="io-close">收起</button>
+        </div>
+      </div>
+      <div class="flex">
+        <button class="primary" data-act="save-user">保存</button>
+        <button data-act="draft-user">让 DS 起草</button>
+      </div>
+    </div>`;
+  S.editingIdx = -1;
+  S.editingWhich = null;
+  renderEntryChips(Array.isArray(uu.entries) ? uu.entries : [], 'user');
+}
+
+/* ---------- 技能 ---------- */
+
+async function renderSkills() {
+  const view = document.getElementById('view');
+  const data = await api('/skills');
+  S.skills = data;
+  const items = Object.values(data.items || {});
+  const skillRows = items.map((s) => {
+    const modeLabel = s.mode === 'auto' ? '自动' : s.mode === 'off' ? '关闭' : '草案确认';
+    const grantText = s.mode === 'auto' ? (s.granted ? '授权到 ' + fmt(s.grantUntil) : '授权已过期') : '';
+    return `<div class="skill-row">
+      <div>
+        <b>${esc(s.label)}</b>
+        <div class="muted">${esc(s.hint)}</div>
+      </div>
+      <div class="flex">
+        <select data-act="skill-mode" data-id="${esc(s.id)}" title="草案确认：只起草，人点头才写。自动：限时授权后 DS 可直接写。关闭：禁用。">
+          <option value="confirm" ${s.mode === 'confirm' ? 'selected' : ''}>草案确认</option>
+          <option value="auto" ${s.mode === 'auto' ? 'selected' : ''}>自动</option>
+          <option value="off" ${s.mode === 'off' ? 'selected' : ''}>关闭</option>
+        </select>
+        <button data-act="skill-draft" data-id="${esc(s.id)}">起草</button>
+        ${grantText ? `<span class="tag ${s.granted ? 'ok' : 'bad'}">${esc(grantText)}</span>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+  const drafts = (data.drafts || []).map((d) => `<tr>
+    <td>${esc(data.items?.[d.skill]?.label || d.skill)}</td>
+    <td>${esc(d.title)}</td>
+    <td class="mono">${fmt(d.createdAt)}</td>
+    <td class="actions">
+      <button data-act="draft-view" data-id="${esc(d.id)}">查看</button>
+      <button class="primary" data-act="draft-apply" data-id="${esc(d.id)}">采用</button>
+      <button class="danger" data-act="draft-discard" data-id="${esc(d.id)}">丢弃</button>
+    </td>
+  </tr>`).join('');
+  view.innerHTML = `
+    <div class="panel">
+      <h3>技能 · 让 DS 自己写东西</h3>
+      <p class="hint">默认「草案确认」：DS 只能起草，草案列在下面，你点「采用」才真正写进人设 / 记忆 / 预设。想让它自己直接写，得改成「自动」并限时授权（到期自动收回）。所有动作都记在审计日志里。DS 自己改人设走文件，不走这些按钮——规则见 AGENT.md。</p>
+      ${skillRows || '<div class="empty">没有技能</div>'}
+    </div>
+    <div class="panel">
+      <h3>待确认的草案</h3>
+      ${drafts ? `<table><thead><tr><th>技能</th><th>标题</th><th>时间</th><th></th></tr></thead><tbody>${drafts}</tbody></table>` : '<div class="empty">没有草案。点上面的「起草」看看。</div>'}
+    </div>`;
+}
+
+async function showDraft(draft) {
+  openDialog(draft.title || '草案', `<p class="hint">草案还没写入。确认没问题就点「采用」，否则关掉。</p><pre style="white-space:pre-wrap;max-height:56vh;overflow:auto;margin:0;font-size:12px">${esc(JSON.stringify(draft.data, null, 2))}</pre>`, 'draft-apply', async () => {
+    await api('/skills/apply', { method: 'POST', body: { id: draft.id, confirmed: true, source: 'ui' } });
+    toast('已采用');
+    await reloadState();
+    if (S.tab === 'persona' || S.tab === 'skills') await reloadTab();
+  });
+  document.getElementById('dlg-save').textContent = '采用';
+}
+
+async function viewDraft(id) {
+  const data = await api('/skills/draft?id=' + encodeURIComponent(id));
+  openDialog(data.draft?.title || '草案', `<pre style="white-space:pre-wrap;max-height:56vh;overflow:auto;margin:0;font-size:12px">${esc(JSON.stringify(data.draft?.data, null, 2))}</pre>`, 'draft-view', null);
+  document.getElementById('dlg-save').style.display = 'none';
+}
+
+async function renderPresets() {
+  document.getElementById('view').innerHTML = `<iframe title="预设编排编辑器" src="/plugins/dsh-wrx-memory/preset-ui/?character=${encodeURIComponent(S.char)}" style="width:100%;min-height:1100px;border:0;border-radius:12px"></iframe>`;
+}
+
+/* ---------- 系统记忆 ---------- */
+
+const FIELDS = {
+  summary: [['content', '概要正文', 'textarea'], ['tag', '主题标签', 'text']],
+  person: [['name', '名称', 'text'], ['relationship', '关系', 'text'], ['history', '重要经历', 'textarea'], ['impression', '用户印象', 'textarea']],
+  item: [['name', '名称', 'text'], ['description', '描述', 'textarea'], ['location', '位置', 'text']],
+  agreement: [['content', '约定内容', 'textarea']],
+};
+
+function rowSummary(r) {
+  if (r.kind === 'summary') return `${r.content}${r.tag ? '　#' + r.tag : ''}`;
+  if (r.kind === 'agreement') return r.content;
+  return `${r.name}${r.relationship ? '（' + r.relationship + '）' : ''}${r.history ? '　' + r.history : ''}${r.description ? '　' + r.description : ''}${r.location ? '　@' + r.location : ''}`;
+}
+
+async function renderMemory() {
+  const view = document.getElementById('view');
+  if (!S.char) { view.innerHTML = '<div class="empty">没有可用角色</div>'; return; }
+  const data = await api('/memory?character=' + encodeURIComponent(S.char) + (S.kind ? '&kind=' + S.kind : ''));
+  S.rows = data.rows || [];
+  const tabs = [['', '全部'], ['summary', '概要'], ['person', '人物'], ['item', '物品'], ['agreement', '约定']];
+  const rows = S.rows.map((r) => `<tr>
+      <td class="mono">${esc(r.id)}</td>
+      <td>${r.kind === 'summary' || r.kind === 'agreement' ? esc(short(rowSummary(r), 160)) : `<b>${esc(r.name)}</b><div class="muted">${esc(short(rowSummary(r).replace(r.name, ''), 140))}</div>`}</td>
+      <td class="mono">${fmt(r.range_start)}</td>
+      <td><span class="tag ${r.mode === 'cold' ? 'cold' : r.mode === 'freeze' ? 'chip-freeze' : 'hot'}">${r.mode === 'freeze' ? '冻结' : r.mode === 'cold' ? '冷' : '热'}</span>${r.vectorized ? ' <span class="tag">向量</span>' : ''}</td>
+      <td class="actions">
+        <button data-act="edit" data-id="${esc(r.id)}">编辑</button>
+        <button data-act="mode" data-id="${esc(r.id)}" data-mode="${r.mode === 'hot' ? 'cold' : 'hot'}">${r.mode === 'hot' ? '转冷' : '转热'}</button>
+        ${r.mode !== 'freeze' ? `<button data-act="mode" data-id="${esc(r.id)}" data-mode="freeze" title="保留数据，不注入、不召回、不向量化">冻结</button>` : ''}
+        <button class="danger" data-act="del" data-id="${esc(r.id)}">删除</button>
+      </td>
+    </tr>`).join('');
+  view.innerHTML = `
+    <div class="split">
+      ${tabs.map(([k, label]) => `<button class="${S.kind === k ? 'primary' : ''}" data-act="kind" data-id="${k}">${label}</button>`).join(' ')}
+      <div class="spacer"></div>
+      <button data-act="cool-all">一键转冷</button>
+      <button data-act="add">新增记录</button>
+    </div>
+    ${rows ? `<table><thead><tr><th style="width:90px">ID</th><th>内容</th><th style="width:130px">时间范围</th><th style="width:110px">状态</th><th></th></tr></thead><tbody>${rows}</tbody></table>` : '<div class="empty">这张表还是空的</div>'}`;
+}
+
+/* ---------- 日记 ---------- */
+
+async function renderDiary() {
+  const view = document.getElementById('view');
+  const data = await api('/diary?character=' + encodeURIComponent(S.char || ''));
+  S.diaries = data.diaries || [];
+  const list = S.diaries.map((d) => `<div class="diary">
+      <h4>${esc(d.title || '（无标题）')} <span class="muted mono">${esc(d.diary_date)}</span>
+        ${d.injection_mode === 'freeze' ? '<span class="chip-freeze" title="冻结：不注入不召回，只能自己查">冻结</span>' : d.injection_mode === 'cold' ? '<span class="chip-cold" title="已向量化，走召回">冷</span>' : d.injection_mode === 'pending' ? '<span class="chip-pending" title="正在向量化">转冷中</span>' : '<span class="chip-hot" title="未向量化，走上下文注入">热</span>'}
+        ${(d.tags || []).map((t) => `<span class="tag">${esc(t)}</span>`).join(' ')}</h4>
+      <div class="body">${esc(d.content)}</div>
+      ${(d.unresolved_hooks || []).length ? `<div class="muted" style="margin-top:6px">未结：${esc((d.unresolved_hooks || []).join('；'))}</div>` : ''}
+    </div>`).join('');
+  view.innerHTML = `
+    <div class="split">
+      <input type="date" id="diary-date" value="${new Date().toISOString().slice(0, 10)}" style="width:170px" />
+      <button data-act="diary-gen" class="primary">为这一天写日记</button>
+      <span class="muted">日记功能默认不自动运行，先生成一篇看看质量。</span>
+    </div>
+    <div class="panel">
+      <h3>即时日记</h3>
+      <p class="hint">使用上方日期，按项目时区 ${esc(S.config?.timezone || 'Asia/Shanghai')} 选择时间段，含开始、不含结束。只读取聊天正文，新增一篇，不覆盖每日总结或冻结日记。相同材料不会重复生成。</p>
+      <div class="split">
+        <label>会话 ID <input id="instant-session" type="text" placeholder="填写要记录的 DSH 会话 ID"></label>
+        <label>开始 <input id="instant-start" type="time" value="00:00"></label>
+        <label>结束（可用24:00） <input id="instant-end" type="text" value="24:00" placeholder="HH:MM" style="width:110px"></label>
+        <label>材料范围 <select id="instant-scope"><option value="conversation">仅指定会话</option><option value="character">角色范围的各会话</option></select></label>
+        <button data-act="diary-instant" class="primary">生成即时日记</button>
+      </div>
+    </div>
+    ${list || '<div class="empty">还没有日记</div>'}`;
+}
+
+/* ---------- 自主活动 ---------- */
+
+async function renderActivity() {
+  const view = document.getElementById('view');
+  const data = await api('/activity?character=' + encodeURIComponent(S.char || ''));
+  S.activity = data.notes || [];
+  const list = S.activity.map((n) => `<div class="diary">
+      <h4>${esc(n.activity_type || '活动')} <span class="muted mono">${fmt(n.occurred_at || n.created_at)}</span>
+        ${n.injection_mode === 'freeze' ? '<span class="chip-freeze" title="冻结：不注入不召回，只能自己查">冻结</span>' : n.injection_mode === 'cold' ? '<span class="chip-cold" title="已向量化，走召回">冷</span>' : n.injection_mode === 'pending' ? '<span class="chip-pending" title="正在向量化">转冷中</span>' : '<span class="chip-hot" title="未向量化，走上下文注入">热</span>'}
+        <span class="tag ${n.note_status === 'done' ? 'ok' : ''}">${esc(n.note_status || '')}</span></h4>
+      <div class="body">${esc(short(n.activity_content || n.content, 220))}</div>
+    </div>`).join('');
+  view.innerHTML = `
+    <div class="split">
+      <button data-act="activity-gen" class="primary">生成一次外出报告</button>
+      <span class="muted">默认不自动跑；在设置里可以开启「每天一次」。生成会读最近 24 小时的聊天和角色人设。</span>
+    </div>
+    ${list || '<div class="empty">还没有活动记录</div>'}`;
+}
+
+/* ---------- 转冷 ---------- */
+
+async function refreshColdStat() {
+  const el = document.getElementById('cold-stat');
+  if (!el) return;
+  try {
+    const r = await api('/cold/stats?character=' + encodeURIComponent(S.char || ''));
+    const s = r.stat || {};
+    el.textContent = `日记 热 ${s.diariesHot ?? '?'} · 转冷中 ${s.diariesPending ?? 0} · 冷 ${s.diariesCold ?? '?'} · 冻结 ${s.diariesFreeze ?? 0} ｜ 外出 热 ${s.activitiesHot ?? '?'} · 转冷中 ${s.activitiesPending ?? 0} · 冷 ${s.activitiesCold ?? '?'} · 冻结 ${s.activitiesFreeze ?? 0}`;
+  } catch (e) {
+    el.textContent = '统计拿不到：' + (e && e.message ? e.message : e);
+  }
+}
+
+/* ---------- 兼容性 ---------- */
+
+async function renderCompat() {
+  const view = document.getElementById('view');
+  let data = null;
+  let error = '';
+  try { data = await api('/compat'); } catch (e) { error = e.message; }
+
+  if (error) {
+    view.innerHTML = `<div class="empty">读不到兼容性状态：${esc(error)}</div>`;
+    return;
+  }
+
+  const card = (id, title, desc, st, btnLabel) => {
+    const applied = st && st.state === 'applied';
+    const partial = st && st.state === 'partial';
+    const badge = applied ? '<span class="tag ok">已打</span>'
+      : partial ? '<span class="tag">一半</span>'
+      : '<span class="tag bad">未打</span>';
+    const note = st && st.extra ? `（${esc(st.extra)}）` : '';
+    return `<div class="panel">
+      <h3>${esc(title)} ${badge}</h3>
+      <p class="hint">${desc}</p>
+      <div class="meta">状态：${esc(st ? st.detail : '未知')}${note}</div>
+      <div style="margin-top:12px">
+        <button class="primary" data-act="compat-apply" data-id="${id}" ${applied ? 'disabled' : ''}>${applied ? '已应用' : esc(btnLabel)}</button>
+      </div>
+    </div>`;
+  };
+
+  view.innerHTML = `
+    <div class="panel">
+      <h3>兼容性</h3>
+      <p class="hint">WRX统一编排负责排序和时间；这里只保留OpenCode Go中间system兼容补丁。补丁改的是 DSH 安装目录里的文件，<b>打完必须手动重启 DSH 才生效</b>。升级 DSH 后补丁可能被覆盖，回来再点一次就行。</p>
+    </div>
+    ${card('midconvo', 'opencode-go 中间 system（midconvo）',
+      '如果使用OpenCode Go且希望保留历史中间的system角色，请应用此补丁并重启。它控制供应商适配器是否保留中间system，和WRX排序是不同环节。',
+      data.midconvo, '打这个补丁')}
+  `;
+}
+
+/* ---------- 设置 ---------- */
+
+async function renderSettings() {
+  const view = document.getElementById('view');
+  if (!S.prompts) {
+    const p = await api('/prompts');
+    S.prompts = p.prompts;
+  }
+  if (!S.presets) {
+    try { S.presets = (await api('/presets')).state; } catch { S.presets = { presets: [], active_preset_id: null }; }
+  }
+  if (!S.providers.length) {
+    try {
+      const r = await api('/llm/providers');
+      S.providers = r.providers || [];
+      S.defaultSelection = r.defaultSelection;
+    } catch { /* 保持为空 */ }
+  }
+  const cfg = S.config || {};
+  const llm = cfg.llm || {};
+  const sum = cfg.summary || {};
+  const vec = cfg.vector || {};
+  const providerOptions = ['', ...S.providers.map((p) => p.provider)].map((p) =>
+    `<option value="${esc(p)}" ${llm.provider === p ? 'selected' : ''}>${esc(p || '（DSH 当前默认）')}</option>`).join('');
+  const modelList = (S.providers.find((p) => p.provider === llm.provider)?.models || []).map((m) => `<option value="${esc(m)}"></option>`).join('');
+  view.innerHTML = `
+    <div class="panel">
+      <h3>记忆总结</h3>
+      <p class="hint">每一类记忆多久总结一次。系统记忆按周期把新聊天提炼进四表；日记、外出、用户画像、角色画像各自按小时跑一次。关掉自动也可以点顶部的「立即总结」手动跑。</p>
+
+      <h4>系统记忆（四表）</h4>
+      <label class="check"><input type="checkbox" id="sum-enabled" ${sum.enabled ? 'checked' : ''} /> 启用</label>
+      <div class="row2" style="margin-top:10px">
+        <div class="field"><label>周期（分钟）</label><input type="number" id="sum-interval" min="1" max="10080" value="${sum.intervalMinutes || 60}" /></div>
+        <div class="field"><label>批次间隔（秒）</label><input type="number" id="sum-delay" min="0" max="60" value="${sum.delaySeconds ?? 2}" /></div>
+      </div>
+
+      <h4 style="margin-top:16px">日记 / 外出 / 画像</h4>
+      <div class="row2">
+        <div class="field"><label class="check"><input type="checkbox" id="diary-enabled" ${cfg.diary?.enabled ? 'checked' : ''} /> 日记（每天一篇）</label>
+          <input type="number" id="diary-hour" min="0" max="23" value="${cfg.diary?.hour ?? 3}" style="margin-top:8px" title="每天几点写（本地时区）" /></div>
+        <div class="field"><label class="check"><input type="checkbox" id="activity-enabled" ${cfg.activity?.enabled ? 'checked' : ''} /> 外出（每天一条）</label>
+          <input type="number" id="activity-hour" min="0" max="23" value="${cfg.activity?.hour ?? 10}" style="margin-top:8px" title="每天几点生成（本地时区）" /></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label class="check"><input type="checkbox" id="profile-enabled" ${cfg.profile?.enabled !== false ? 'checked' : ''} /> 用户画像</label>
+          <input type="number" id="profile-hour" min="0" max="23" value="${cfg.profile?.hour ?? 4}" style="margin-top:8px" title="每天几点跑（本地时区）" /></div>
+        <div class="field"><label class="check"><input type="checkbox" id="selfprofile-enabled" ${cfg.selfProfile?.enabled !== false ? 'checked' : ''} /> 角色画像</label>
+          <input type="number" id="selfprofile-hour" min="0" max="23" value="${cfg.selfProfile?.hour ?? 5}" style="margin-top:8px" title="每天几点跑（本地时区）" /></div>
+      </div>
+
+      <details style="margin-top:14px">
+        <summary class="muted">高级（时区 / 记忆库路径）</summary>
+        <div class="row2" style="margin-top:10px">
+          <div class="field"><label>时区</label><input type="text" id="sum-tz" value="${esc(cfg.timezone || 'Asia/Shanghai')}" /></div>
+          <div class="field"><label>记忆库路径</label><input type="text" id="sum-db" value="${esc(cfg.dbPath || '')}" /></div>
+        </div>
+      </details>
+      <button class="primary" data-act="save-config">保存</button>
+    </div>
+
+    <div class="panel">
+      <h3>总结用的 LLM</h3>
+      <p class="hint">默认用 DSH 自己的模型和凭据；想换 Gemini Flash 之类，切成「独立端点」填 OpenAI 兼容地址即可。</p>
+      <div class="row2">
+        <div class="field"><label>模式</label>
+          <select id="llm-mode">
+            <option value="dsh" ${llm.mode !== 'endpoint' ? 'selected' : ''}>DSH 默认（同一个我）</option>
+            <option value="endpoint" ${llm.mode === 'endpoint' ? 'selected' : ''}>独立端点（自填 API）</option>
+          </select>
+        </div>
+        <div class="field"><label>provider</label><select id="llm-provider">${providerOptions}</select></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label>model</label><input type="text" id="llm-model" list="model-list" value="${esc(llm.model || '')}" /><datalist id="model-list">${modelList}</datalist></div>
+        <div class="field"><label>温度</label><input type="number" id="llm-temp" step="0.1" min="0" max="2" value="${llm.temperature ?? 0.2}" /></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label>baseURL（独立端点用）</label><input type="text" id="llm-base" value="${esc(llm.baseURL || '')}" /></div>
+        <div class="field"><label>API Key（留 *** 表示不修改）</label><input type="password" id="llm-key" value="${esc(llm.apiKey === '***' ? '***' : '')}" placeholder="或设置环境变量 DEEPSEEK_API_KEY" /></div>
+      </div>
+      <div class="flex">
+        <button class="primary" data-act="save-llm">保存模型设置</button>
+        <button data-act="test-llm">测试连通性</button>
+        ${S.defaultSelection ? `<span class="muted">DSH 默认：${esc(S.defaultSelection.provider)} / ${esc(S.defaultSelection.model)}</span>` : ''}
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3>记忆转冷</h3>
+      <p class="hint">热 = 每轮注入上下文；冷 = 转冷之后立刻向量化、按当前话题召回。向量补不上的，下一轮心跳会继续补，不会留下「记了却永远发不出去」的死记忆。</p>
+
+      <h4>系统记忆（概要 / 人物 / 物品 / 约定）</h4>
+      <div class="row2">
+        <div class="field"><label class="check"><input type="checkbox" id="autocold-enabled" ${cfg.summary?.autoColdEnabled ? 'checked' : ''} /> 自动转冷</label>
+          <div style="display:flex;gap:8px;margin-top:8px;align-items:center">
+            <span class="muted">每</span>
+            <input type="number" id="autocold-hours" min="1" max="720" value="${cfg.summary?.autoColdHours ?? 3}" style="width:80px" />
+            <span class="muted">小时转一次</span>
+          </div></div>
+      </div>
+
+      <h4 style="margin-top:16px">日记 / 外出记录</h4>
+      <p class="hint">超过保留天数的记录不再注入，但会留向量、能召回。</p>
+      <div class="row2">
+        <div class="field"><label class="check"><input type="checkbox" id="coldenabled" ${cfg.tavern?.coldEnabled !== false ? 'checked' : ''} /> 自动转冷</label>
+          <div style="display:flex;gap:8px;margin-top:8px;align-items:center">
+            <span class="muted">每</span>
+            <input type="number" id="coldcheck-hours" min="1" max="720" value="${cfg.tavern?.coldCheckHours ?? 6}" style="width:80px" />
+            <span class="muted">小时查一次</span>
+          </div></div>
+        <div class="field"><label>保留天数（日记 / 外出）</label>
+          <div style="display:flex;gap:8px;margin-top:8px">
+            <input type="number" id="cold-diary-days" min="0" max="365" value="${cfg.tavern?.diaryDays ?? 2}" title="日记保留天数" style="width:50%" />
+            <input type="number" id="cold-activity-days" min="0" max="365" value="${cfg.tavern?.activityDays ?? 2}" title="外出记录保留天数" style="width:50%" />
+          </div>
+        </div>
+      </div>
+      <div class="row2">
+        <div class="field"><label>日记到期之后</label><select id="cold-diary-to">
+          <option value="freeze" ${(cfg.tavern?.diaryColdTo ?? 'freeze') === 'freeze' ? 'selected' : ''}>冻结（不注入不召回，只能自己查）</option>
+          <option value="cold" ${(cfg.tavern?.diaryColdTo ?? 'freeze') === 'cold' ? 'selected' : ''}>冷（向量化召回）</option>
+        </select></div>
+        <div class="field"><label>外出到期之后</label><select id="cold-activity-to">
+          <option value="cold" ${(cfg.tavern?.activityColdTo ?? 'cold') === 'cold' ? 'selected' : ''}>冷（向量化召回）</option>
+          <option value="freeze" ${(cfg.tavern?.activityColdTo ?? 'cold') === 'freeze' ? 'selected' : ''}>冻结（只能自己查）</option>
+        </select></div>
+      </div>
+
+      <div class="flex" style="margin-top:10px">
+        <button class="primary" data-act="save-cold">保存</button>
+        <button data-act="cold-rotate">现在清一次</button>
+        <span class="muted" id="cold-stat">统计中…</span>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3>记忆注入</h3>
+      <p class="hint">热 = 每轮直接注入 system（默认开）；冷 = 转冷后向量化，按当前话题召回注入。每类记忆可以单独关。</p>
+      <label class="check"><input type="checkbox" id="tavern-enabled" ${cfg.tavern?.enabled ? 'checked' : ''} /> 启用酒馆注入（总开关）</label>
+      <div class="row3" style="margin-top:12px">
+        <div class="field"><label>用哪套预设</label><select id="tavern-preset">${(S.presets?.presets || []).map((p) => `<option value="${esc(p.id)}" ${(cfg.tavern?.presetId || S.presets?.active_preset_id) === p.id ? 'selected' : ''}>${esc(p.name)}（${(p.prompts || []).length} 条）</option>`).join('') || '<option value="">（没有预设）</option>'}</select></div>
+      </div>
+
+      <h4 style="margin-top:14px">注入范围</h4>
+      <div class="row2">
+        <div class="field"><label>系统记忆 · 热</label><label class="check"><input type="checkbox" id="inj-hotmemory" ${cfg.tavern?.inject?.hotMemory !== false ? 'checked' : ''} /> 每轮注入</label></div>
+        <div class="field"><label>系统记忆 · 冷</label><label class="check"><input type="checkbox" id="inj-coldmemory" ${cfg.tavern?.inject?.coldMemory !== false ? 'checked' : ''} /> 向量召回</label></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label>日记 · 热</label><label class="check"><input type="checkbox" id="inj-hotdiary" ${cfg.tavern?.inject?.hotDiary !== false ? 'checked' : ''} /> 每轮注入</label></div>
+        <div class="field"><label>日记 · 冷</label><label class="check"><input type="checkbox" id="inj-colddiary" ${cfg.tavern?.inject?.coldDiary !== false ? 'checked' : ''} /> 向量召回</label></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label>外出 · 热</label><label class="check"><input type="checkbox" id="inj-hotactivity" ${cfg.tavern?.inject?.hotActivity !== false ? 'checked' : ''} /> 每轮注入</label></div>
+        <div class="field"><label>外出 · 冷</label><label class="check"><input type="checkbox" id="inj-coldactivity" ${cfg.tavern?.inject?.coldActivity !== false ? 'checked' : ''} /> 向量召回</label></div>
+      </div>
+
+      <div class="flex" style="margin-top:10px">
+        <button class="primary" data-act="save-inject">保存</button>
+        <button data-act="preview-tavern">预览注入内容</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3>上下文检查</h3>
+      <p class="hint">看上一轮实际发出去的 system prompt（DSH 会话里存的快照）、最近几条消息，以及酒馆注入段。用于核对“到底发了什么”。</p>
+      <button data-act="inspect-request">看上一轮上下文</button>
+    </div>
+
+    <div class="panel">
+      <h3>向量召回与重排序</h3>
+      <p class="hint">冷记忆召回：Embedding 把查询和记忆都变成向量，按余弦相似度取最像的 K 条；开了 Rerank 就先粗排取 2K 再精排，精排失败自动退回向量排序。地址填到 /v1 或域名都行，会自动补 /embeddings、/models。</p>
+      <label class="check"><input type="checkbox" id="vec-enabled" ${vec.enabled ? 'checked' : ''} /> 启用向量召回</label>
+
+      <h4 style="margin-top:14px">Embedding</h4>
+      <div class="row3">
+        <div class="field"><label>API 地址</label><input type="text" id="vec-url" placeholder="https://api.siliconflow.cn/v1" value="${esc(vec.apiUrl || '')}" /></div>
+        <div class="field"><label>模型</label><input type="text" id="vec-model" placeholder="BAAI/bge-m3" value="${esc(vec.model || '')}" /></div>
+        <div class="field"><label>Key</label><input type="password" id="vec-key" placeholder="留 *** 表示不修改" value="${esc(vec.apiKey === '***' ? '***' : '')}" /></div>
+      </div>
+      <div class="field"><label>拉取到的模型</label><select id="vec-model-select" disabled><option value="">点「拉取模型」后在这里选</option></select></div>
+      <div class="flex">
+        <button data-act="vec-check">检查地址（不联网）</button>
+        <button data-act="vec-models">拉取模型</button>
+        <button data-act="vec-test">真实测试（调一次）</button>
+      </div>
+      <p class="hint" id="vec-state">${esc(vec.model ? '当前模型：' + vec.model : '还没配置模型')}</p>
+
+      <h4 style="margin-top:14px">Rerank</h4>
+      <label class="check"><input type="checkbox" id="vec-rerank-enabled" ${vec.rerankEnabled ? 'checked' : ''} /> 启用 Rerank 精排</label>
+      <div class="row3" style="margin-top:10px">
+        <div class="field"><label>Rerank 地址</label><input type="text" id="vec-rerank-url" placeholder="https://api.siliconflow.cn/v1/rerank" value="${esc(vec.rerankUrl || '')}" /></div>
+        <div class="field"><label>Rerank 模型</label><input type="text" id="vec-rerank-model" placeholder="BAAI/bge-reranker-v2-m3" value="${esc(vec.rerankModel || '')}" /></div>
+        <div class="field"><label>Key</label><input type="password" id="vec-rerank-key" placeholder="留 *** 表示不修改" value="${esc(vec.rerankKey === '***' ? '***' : '')}" /></div>
+      </div>
+      <div class="field"><label>拉取到的 Rerank 模型</label><select id="vec-rerank-model-select" disabled><option value="">点「拉取模型」后在这里选</option></select></div>
+      <div class="flex">
+        <button data-act="vec-rerank-check">检查地址（不联网）</button>
+        <button data-act="vec-rerank-models">拉取模型</button>
+        <button data-act="vec-rerank-test">真实测试（调一次）</button>
+      </div>
+      <p class="hint" id="vec-rerank-state">${esc(vec.rerankModel ? '当前模型：' + vec.rerankModel : 'Rerank 未配置，只用向量排序')}</p>
+
+      <h4 style="margin-top:14px">召回参数</h4>
+      <div class="row3">
+        <div class="field"><label>相似度阈值</label><input type="number" step="0.01" min="0" max="1" id="vec-threshold" value="${vec.threshold ?? 0.3}" /></div>
+        <div class="field"><label>召回条数 K</label><input type="number" min="1" max="200" id="vec-k" value="${vec.maxResults ?? 16}" /></div>
+      </div>
+      <button class="primary" data-act="save-vector">保存向量配置</button>
+    </div>
+
+    <div class="panel">
+      <h3>提示词</h3>
+      <p class="hint">保存会直接覆盖模块内 Markdown；恢复默认会用独立默认稿立即覆盖全部后台提示词。四表 JSON、recall、optimize/unchanged 等输出协议需与后端保持一致。</p>
+      ${Object.entries(S.prompts).map(([name, text]) => '<div class="field"><label>' + esc(({system:'第一段 · 四表提取',update:'第二段 · 冷记录核对',diary:'每日日记',diaryInstant:'即时日记',diaryMerge:'即时日记合并',activity:'外出记录',profile:'用户画像',selfProfile:'角色画像',MERGE_INSTRUCTION:'四表分段合并',DIARY_SEGMENT_INSTRUCTION:'长日记分段',DIARY_MERGE_INSTRUCTION:'每日日记合并',skillPersona:'技能 · 人设',skillUser:'技能 · 用户',skillMemory:'技能 · 记忆',skillPreset:'技能 · 预设'})[name] || name) + '（' + esc(name) + '）</label><textarea data-prompt-name="' + esc(name) + '" style="min-height:180px">' + esc(text) + '</textarea></div>').join('')}
+      <div class="flex">
+        <button class="primary" data-act="save-prompts">保存提示词</button>
+        <button data-act="reset-prompts" class="danger">恢复默认</button>
+      </div>
+    </div>`;
+  refreshColdStat();
+}
+
+function openDialog(title, bodyHtml, mode, onSave) {
+  S.dialogMode = { mode, onSave };
+  document.getElementById('dlg-title').textContent = title;
+  document.getElementById('dlg-body').innerHTML = bodyHtml;
+  const saveBtn = document.getElementById('dlg-save');
+  saveBtn.textContent = '保存';
+  saveBtn.style.display = '';
+  document.getElementById('dlg').showModal();
+}
+
+function fieldHtml(field, value) {
+  const [key, label, type] = field;
+  if (type === 'textarea') {
+    return `<div class="field"><label>${esc(label)}</label><textarea id="f-${key}" data-key="${key}">${esc(value || '')}</textarea></div>`;
+  }
+  return `<div class="field"><label>${esc(label)}</label><input type="text" id="f-${key}" data-key="${key}" value="${esc(value || '')}" /></div>`;
+}
+
+function openEditor(kind, row) {
+  const fields = FIELDS[kind] || [];
+  const body = fields.map((f) => fieldHtml(f, row ? row[f[0]] : '')).join('');
+  openDialog(row ? `编辑 ${row.id}` : `新增${kindLabel[kind] || ''}记录`, body, row ? 'edit' : 'add', async (values) => {
+    if (row) await api('/memory/update', { method: 'POST', body: { character: S.char, id: row.id, fields: values } });
+    else await api('/memory/add', { method: 'POST', body: { character: S.char, kind, fields: values } });
+    toast('已保存');
+    await reloadState();
+    await reloadTab();
+  });
+}
+
+/* ---------- 事件 ---------- */
+
+window.addEventListener('message', event => {
+  if (event.origin !== location.origin || event.source !== document.querySelector('iframe')?.contentWindow || event.data?.type !== 'wrx-select-role') return;
+  document.querySelector('[data-act="select-role"][data-id="' + CSS.escape(event.data.id) + '"]')?.click();
+});
+
+document.addEventListener('click', async (event) => {
+  const target = event.target.closest('[data-act]');
+  if (!target) return;
+  const act = target.dataset.act;
+  const id = target.dataset.id;
+  try {
+    if ((act === 'select-role' || act === 'tab') && document.querySelector('iframe')?.contentWindow?.wrxHasUnsaved?.() && !confirm('放弃尚未保存的预设修改并切换？')) return;
+    if (act === 'select-role' || act === 'tab') document.querySelector('iframe')?.contentWindow?.wrxDiscard?.();
+    if (act === 'select-role') { S.char = id; await reloadState(); await reloadTab(); return; }
+    if (act === 'create-role') {
+      const roleId = prompt('角色ID：1–80位小写字母、数字、下划线或短横线'); if (!roleId) return;
+      const name = prompt('新角色名称'); if (!name?.trim()) return;
+      const result = await api('/roles', { method: 'POST', body: { id: roleId, create: true, name: name.trim(), enabled: false, presetIds: [] } });
+      S.char = result.role.id; await reloadState(); await reloadTab(); return;
+    }
+    if (act === 'save-role-binding') {
+      await api('/roles', { method: 'POST', body: { id: S.char, update: true, name: currentCharacter().name, enabled: document.getElementById('role-enabled').checked, wrxPresetId: document.getElementById('role-wrx-preset')?.value || '', presetIds: [...document.querySelectorAll('[name="bound-preset"]:checked')].map(input => input.value) } });
+      await reloadState(); await reloadTab(); toast('角色绑定已保存'); return;
+    }
+    if (act === 'tab') { S.tab = id; renderTabs(); await reloadTab(); return; }
+    if (act === 'compat-apply') {
+      target.disabled = true;
+      toast('正在打补丁…');
+      try {
+        const r = await api('/compat/apply', { method: 'POST', body: { name: id } });
+        const lines = (r.done || []).join('；');
+        toast('补丁已成功' + (lines ? '：' + lines : '') + '。请手动重启 DSH 后生效。');
+        await renderCompat();
+      } catch (e) {
+        toast('打补丁失败：' + e.message);
+      } finally {
+        target.disabled = false;
+      }
+      return;
+    }
+    if (act === 'draft-persona' || act === 'draft-user') {
+      const skill = act === 'draft-persona' ? 'persona' : 'user';
+      toast('正在起草，可能要半分钟…');
+      target.disabled = true;
+      try {
+        const r = await api('/skills/draft', { method: 'POST', body: { skill } });
+        await showDraft(r.draft);
+      } finally { target.disabled = false; }
+      return;
+    }
+    if (act === 'skill-draft') {
+      const skill = target.dataset.id;
+      toast('正在起草，可能要半分钟…');
+      target.disabled = true;
+      try {
+        await api('/skills/draft', { method: 'POST', body: { skill } });
+        toast('草案好了，去下面「待确认的草案」看看');
+        await renderSkills();
+      } finally { target.disabled = false; }
+      return;
+    }
+    if (act === 'draft-view') { await viewDraft(id); return; }
+    if (act === 'draft-apply') {
+      if (!confirm('采用这条草案？会真的写进数据。')) return;
+      await api('/skills/apply', { method: 'POST', body: { id, confirmed: true, source: 'ui' } });
+      toast('已采用');
+      await reloadState();
+      await reloadTab();
+      return;
+    }
+    if (act === 'draft-discard') {
+      await api('/skills/discard', { method: 'POST', body: { id } });
+      toast('已丢弃');
+      await reloadTab();
+      return;
+    }
+    if (act === 'kind') { S.kind = id; await renderMemory(); return; }
+    if (act === 'add') {
+      const kind = S.kind || 'summary';
+      openEditor(kind, null);
+      return;
+    }
+    if (act === 'edit') {
+      const row = S.rows.find((r) => r.id === id);
+      if (row) openEditor(row.kind, row);
+      return;
+    }
+    if (act === 'del') {
+      if (!confirm('删除 ' + id + '？此操作不可撤销。')) return;
+      await api('/memory/delete', { method: 'POST', body: { character: S.char, id } });
+      toast('已删除');
+      await reloadState();
+      await reloadTab();
+      return;
+    }
+    if (act === 'cool-all') {
+      if (!confirm('把当前角色的全部热记忆一次性转冷？')) return;
+      target.disabled = true;
+      try {
+        const r = await api('/memory/cool-all', { method: 'POST', body: { character: S.char } });
+        toast('已转冷 ' + r.cooled + ' 条');
+        await reloadState();
+        await reloadTab();
+      } finally { target.disabled = false; }
+      return;
+    }
+    if (act === 'mode') {
+      await api('/memory/mode', { method: 'POST', body: { character: S.char, id, mode: target.dataset.mode } });
+      toast('记忆状态已更新');
+      await reloadTab();
+      return;
+    }
+    if (act === 'diary-gen') {
+      const date = document.getElementById('diary-date').value;
+      toast('正在写日记，可能要一两分钟…');
+      target.disabled = true;
+      try {
+        await api('/diary/generate', { method: 'POST', body: { character: S.char, date } });
+        toast('日记写好了');
+        await reloadTab();
+      } finally { target.disabled = false; }
+      return;
+    }
+    if (act === 'diary-instant') {
+      const sessionId = document.getElementById('instant-session').value.trim();
+      if (!sessionId) throw new Error('请填写会话 ID');
+      const body = { character: S.char, sessionId, date: document.getElementById('diary-date').value, startTime: document.getElementById('instant-start').value, endTime: document.getElementById('instant-end').value.trim(), scope: document.getElementById('instant-scope').value };
+      target.disabled = true;
+      toast('正在生成即时日记…');
+      try {
+        const result = await api('/diary/instant', { method: 'POST', body });
+        toast(result.status === 'empty' ? '所选时间段没有聊天正文' : result.status === 'already_processed' ? '相同材料已生成或正在处理中' : '即时日记已保存');
+        await reloadTab();
+      } finally { target.disabled = false; }
+      return;
+    }
+    if (act === 'save-user') {
+      const entries = Array.isArray(S.user?.entries) ? S.user.entries : [];
+      await api('/user', { method: 'POST', body: {
+        name: document.getElementById('user-name').value,
+        core: document.getElementById('user-core').value,
+        entries,
+      } });
+      toast('你的信息已保存（' + entries.length + ' 个标签）');
+      return;
+    }
+    if (act === 'add-entry') {
+      const which = target.dataset.which || 'user';
+      const list = which === 'self' ? (S.self?.entries || []) : (S.user?.entries || []);
+      openEntryEditor(list, -1, which);
+      document.getElementById(which === 'self' ? 'self-editor' : 'entry-editor').scrollIntoView({ block: 'nearest' });
+      return;
+    }
+    if (act === 'edit-entry') {
+      const which = target.dataset.which || 'user';
+      const list = which === 'self' ? (S.self?.entries || []) : (S.user?.entries || []);
+      openEntryEditor(list, Number(target.dataset.idx), which);
+      document.getElementById(which === 'self' ? 'self-editor' : 'entry-editor').scrollIntoView({ block: 'nearest' });
+      return;
+    }
+    if (act === 'entry-save') {
+      const which = S.editingWhich || 'user';
+      const entries = commitEntryEditor();
+      closeEntryEditor(which);
+      renderEntryChips(entries, which);
+      toast('已存进草稿（' + entries.length + ' 个标签），别忘了点「保存」');
+      return;
+    }
+    if (act === 'entry-cancel') {
+      closeEntryEditor(S.editingWhich || 'user');
+      return;
+    }
+    if (act === 'entry-del') {
+      const which = S.editingWhich || 'user';
+      const owner = which === 'self' ? S.self : S.user;
+      const idx = S.editingIdx;
+      const entries = Array.isArray(owner?.entries) ? [...owner.entries] : [];
+      if (!Number.isInteger(idx) || !entries[idx]) return;
+      const title = entries[idx].tag || '这个标签';
+      if (!confirm('删掉「' + title + '」？')) return;
+      entries.splice(idx, 1);
+      owner.entries = entries;
+      closeEntryEditor(which);
+      renderEntryChips(entries, which);
+      toast('已删（草稿），别忘了点「保存」');
+      return;
+    }
+    if (act === 'save-self') {
+      const entries = Array.isArray(S.self?.entries) ? S.self.entries : [];
+      await api('/self', { method: 'POST', body: {
+        entries,
+      } });
+      toast('我的画像已保存（' + entries.length + ' 个标签）');
+      return;
+    }
+    if (act === 'import-user' || act === 'export-user') {
+      const box = document.getElementById('user-io');
+      const text = document.getElementById('user-io-text');
+      box.classList.add('on');
+      if (act === 'export-user') {
+        const doc = {
+          name: document.getElementById('user-name').value.trim() || '用户',
+          core: document.getElementById('user-core').value,
+          entries: Array.isArray(S.user?.entries) ? S.user.entries : [],
+        };
+        const json = JSON.stringify(doc, null, 2);
+        text.value = json;
+        try {
+          const blob = new Blob([json], { type: 'application/json' });
+          const a = document.createElement('a');
+          a.href = URL.createObjectURL(blob);
+          a.download = 'dsh-user-profile.json';
+          a.click();
+          setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+          toast('已生成 JSON（连同下载），也可以点「复制」');
+        } catch {
+          toast('已生成 JSON，点「复制」带走');
+        }
+      }
+      box.scrollIntoView({ block: 'nearest' });
+      return;
+    }
+    if (act === 'io-apply') {
+      const box = document.getElementById('user-io');
+      const text = document.getElementById('user-io-text');
+      const parsed = parseUserJson(text.value.trim());
+      const entries = Array.isArray(parsed.entries) ? parsed.entries : [];
+      if (!entries.length) throw new Error('这份 JSON 里没有 entries');
+      if (parsed.name) document.getElementById('user-name').value = parsed.name;
+      if (parsed.core) document.getElementById('user-core').value = parsed.core;
+      S.user.entries = entries;
+      closeEntryEditor('user');
+      renderEntryChips(entries, 'user');
+      box.classList.remove('on');
+      toast('已填入 ' + entries.length + ' 个标签，点「保存」才写进库');
+      return;
+    }
+    if (act === 'io-copy') {
+      const text = document.getElementById('user-io-text').value;
+      if (!text) throw new Error('这里是空的，先点「导出 JSON」');
+      try {
+        await navigator.clipboard.writeText(text);
+        toast('已复制到剪贴板');
+      } catch {
+        document.getElementById('user-io-text').select();
+        toast('复制被浏览器挡了，已全选，按 Ctrl+C');
+      }
+      return;
+    }
+    if (act === 'io-close') {
+      document.getElementById('user-io').classList.remove('on');
+      return;
+    }
+    if (act === 'save-config') {
+      await api('/config', { method: 'POST', body: { patch: {
+        summary: {
+          enabled: document.getElementById('sum-enabled').checked,
+          intervalMinutes: Number(document.getElementById('sum-interval').value),
+          delaySeconds: Number(document.getElementById('sum-delay').value),
+        },
+        diary: {
+          enabled: document.getElementById('diary-enabled').checked,
+          hour: Number(document.getElementById('diary-hour').value),
+        },
+        activity: {
+          enabled: document.getElementById('activity-enabled').checked,
+          hour: Number(document.getElementById('activity-hour').value),
+        },
+        profile: {
+          enabled: document.getElementById('profile-enabled').checked,
+          hour: Number(document.getElementById('profile-hour').value),
+        },
+        selfProfile: {
+          enabled: document.getElementById('selfprofile-enabled').checked,
+          hour: Number(document.getElementById('selfprofile-hour').value),
+        },
+        timezone: document.getElementById('sum-tz').value,
+        dbPath: document.getElementById('sum-db').value.trim(),
+      } } });
+      toast('记忆总结设置已保存');
+      await reloadState();
+      await reloadTab();
+      return;
+    }
+    if (act === 'save-inject') {
+      await api('/config', { method: 'POST', body: { patch: { tavern: {
+        enabled: document.getElementById('tavern-enabled').checked,
+        presetId: document.getElementById('tavern-preset').value,
+        inject: {
+          hotMemory: document.getElementById('inj-hotmemory').checked,
+          coldMemory: document.getElementById('inj-coldmemory').checked,
+          hotDiary: document.getElementById('inj-hotdiary').checked,
+          coldDiary: document.getElementById('inj-colddiary').checked,
+          hotActivity: document.getElementById('inj-hotactivity').checked,
+          coldActivity: document.getElementById('inj-coldactivity').checked,
+        },
+      } } } });
+      toast('注入范围已保存');
+      await reloadState();
+      return;
+    }
+    if (act === 'save-llm') {
+      await api('/config', { method: 'POST', body: { patch: { llm: {
+        mode: document.getElementById('llm-mode').value,
+        provider: document.getElementById('llm-provider').value,
+        model: document.getElementById('llm-model').value.trim(),
+        baseURL: document.getElementById('llm-base').value.trim(),
+        apiKey: document.getElementById('llm-key').value,
+        temperature: Number(document.getElementById('llm-temp').value),
+      } } } });
+      toast('模型设置已保存');
+      await reloadState();
+      return;
+    }
+    if (act === 'save-character') {
+      const fields = {};
+      for (const [k] of [...CHAR_FIELDS, ...CHAR_LONG]) fields[k] = document.getElementById('c-' + k).value;
+      await api('/character', { method: 'POST', body: { character: S.char, fields } });
+      toast('人设已保存');
+      await reloadState();
+      await reloadTab();
+      return;
+    }
+    if (act === 'activity-gen') {
+      toast('正在生成外出报告…');
+      target.disabled = true;
+      try {
+        await api('/activity/generate', { method: 'POST', body: { character: S.char } });
+        toast('生成好了');
+        await reloadTab();
+      } finally { target.disabled = false; }
+      return;
+    }
+    if (act === 'save-tavern') {
+      await api('/config', { method: 'POST', body: { patch: { tavern: {
+        enabled: document.getElementById('tavern-enabled').checked,
+        presetId: document.getElementById('tavern-preset').value,
+      } } } });
+      toast('酒馆注入设置已保存');
+      await reloadState();
+      return;
+    }
+    if (act === 'save-cold') {
+      await api('/config', { method: 'POST', body: { patch: {
+        summary: {
+          autoColdEnabled: document.getElementById('autocold-enabled').checked,
+          autoColdHours: Number(document.getElementById('autocold-hours').value) || 3,
+        },
+        tavern: {
+          coldEnabled: document.getElementById('coldenabled').checked,
+          coldCheckHours: Number(document.getElementById('coldcheck-hours').value) || 6,
+          diaryDays: Number(document.getElementById('cold-diary-days').value),
+          activityDays: Number(document.getElementById('cold-activity-days').value),
+          diaryColdTo: document.getElementById('cold-diary-to').value,
+          activityColdTo: document.getElementById('cold-activity-to').value,
+        },
+      } } });
+      toast('转冷规则已保存');
+      await refreshColdStat();
+      return;
+    }
+    if (act === 'cold-rotate') {
+      target.disabled = true;
+      try {
+        const r = await api('/cold/rotate', { method: 'POST', body: { character: S.char } });
+        toast('转冷：' + (r.cold || 0) + ' 条变冷、' + (r.frozen || 0) + ' 条冻结' + (r.pending ? '，' + r.pending + ' 条还在向量化' : ''));
+        await refreshColdStat();
+        await reloadTab();
+      } finally { target.disabled = false; }
+      return;
+    }
+    if (act === 'preview-tavern') {
+      const r = await api('/tavern/preview?input=');
+      openDialog('酒馆注入预览', `<pre style="white-space:pre-wrap;max-height:60vh;overflow:auto;margin:0;font-size:12px">${esc(r.text || '（空）')}</pre>`, 'tavern-preview', null);
+      document.getElementById('dlg-save').style.display = 'none';
+      return;
+    }
+    if (act === 'inspect-request') {
+      const r = await api('/debug/last-request');
+      const parts = [];
+      if (r.injected) parts.push('【酒馆注入段｜' + r.injected.chars + ' 字符】\n' + r.injected.text);
+      for (const s of r.system || []) parts.push('【system prompt｜' + s.chars + ' 字符】\n' + s.text);
+      for (const m of r.recent || []) parts.push('【' + m.type + '｜' + m.chars + ' 字符】\n' + m.text);
+      openDialog('上一轮上下文', `<pre style="white-space:pre-wrap;max-height:65vh;overflow:auto;margin:0;font-size:12px">${esc(parts.join('\n\n') || '（读不到，可能会话还没落盘）')}</pre>`, 'inspect', null);
+      document.getElementById('dlg-save').style.display = 'none';
+      return;
+    }
+    if (act === 'save-extras') {
+      await api('/config', { method: 'POST', body: { patch: {
+        diary: {
+          enabled: document.getElementById('diary-enabled').checked,
+          hour: Number(document.getElementById('diary-hour').value),
+        },
+        activity: {
+          enabled: document.getElementById('activity-enabled').checked,
+          hour: Number(document.getElementById('activity-hour').value),
+        },
+        summary: {
+          autoColdEnabled: document.getElementById('autocold-enabled').checked,
+          autoColdMode: 'interval',
+          autoColdHours: Number(document.getElementById('autocold-hours').value) || 3,
+        },
+      } } });
+      toast('已保存');
+      await reloadState();
+      return;
+    }
+    if (act === 'save-vector') {
+      await api('/config', { method: 'POST', body: { patch: { vector: {
+        enabled: document.getElementById('vec-enabled').checked,
+        apiUrl: document.getElementById('vec-url').value.trim(),
+        model: document.getElementById('vec-model').value.trim(),
+        apiKey: document.getElementById('vec-key').value,
+        threshold: Number(document.getElementById('vec-threshold').value),
+        maxResults: Number(document.getElementById('vec-k').value),
+        rerankEnabled: document.getElementById('vec-rerank-enabled').checked,
+        rerankModel: document.getElementById('vec-rerank-model').value.trim(),
+        rerankUrl: document.getElementById('vec-rerank-url').value.trim(),
+        rerankKey: document.getElementById('vec-rerank-key').value,
+      } } } });
+      toast('向量配置已保存');
+      await reloadState();
+      return;
+    }
+    if (act === 'vec-check' || act === 'vec-rerank-check') {
+      const rerank = act === 'vec-rerank-check';
+      const url = document.getElementById(rerank ? 'vec-rerank-url' : 'vec-url').value.trim();
+      const r = await api('/vector/check', { method: 'POST', body: { kind: rerank ? 'rerank' : 'embedding', url } });
+      if (!r.ok) return toast('地址有问题：' + (r.error || '未知'), true);
+      setVectorState(rerank ? 'vec-rerank-state' : 'vec-state',
+        `地址合法；实际会请求：${r.endpoint}${r.models ? '（拉模型走 ' + r.models + '）' : ''}${r.localhost ? '；本机地址，注意服务有没有起' : ''}`);
+      return;
+    }
+    if (act === 'vec-models' || act === 'vec-rerank-models') {
+      const rerank = act === 'vec-rerank-models';
+      const stateId = rerank ? 'vec-rerank-state' : 'vec-state';
+      target.disabled = true;
+      setVectorState(stateId, '正在拉取模型…');
+      try {
+        const r = await api('/vector/models', { method: 'POST', body: {
+          kind: rerank ? 'rerank' : 'embedding',
+          url: document.getElementById(rerank ? 'vec-rerank-url' : 'vec-url').value.trim(),
+          key: document.getElementById(rerank ? 'vec-rerank-key' : 'vec-key').value,
+        } });
+        const select = document.getElementById(rerank ? 'vec-rerank-model-select' : 'vec-model-select');
+        select.innerHTML = '<option value="">选一个填入模型</option>' + r.models.map((m) => `<option value="${esc(m)}">${esc(m)}</option>`).join('');
+        select.disabled = false;
+        setVectorState(stateId, `已拉到 ${r.models.length} 个模型，耗时 ${r.ms}ms：${r.endpoint}`);
+      } catch (error) {
+        setVectorState(stateId, '拉取失败：' + error.message, true);
+        throw error;
+      } finally { target.disabled = false; }
+      return;
+    }
+    if (act === 'vec-test' || act === 'vec-rerank-test') {
+      const rerank = act === 'vec-rerank-test';
+      const stateId = rerank ? 'vec-rerank-state' : 'vec-state';
+      target.disabled = true;
+      setVectorState(stateId, '正在真实调用一次…');
+      try {
+        const r = await api('/vector/test', { method: 'POST', body: {
+          kind: rerank ? 'rerank' : 'embedding',
+          url: document.getElementById(rerank ? 'vec-rerank-url' : 'vec-url').value.trim(),
+          key: document.getElementById(rerank ? 'vec-rerank-key' : 'vec-key').value,
+          model: document.getElementById(rerank ? 'vec-rerank-model' : 'vec-model').value.trim(),
+        } });
+        if (rerank) setVectorState(stateId, `精排正常：${r.model}，${r.ms}ms，得分 ${JSON.stringify(r.scores)}`);
+        else setVectorState(stateId, `向量正常：${r.model}，${r.ms}ms，维度 ${r.dimensions}`);
+        toast('测试通过');
+      } catch (error) {
+        setVectorState(stateId, '测试失败：' + error.message, true);
+        throw error;
+      } finally { target.disabled = false; }
+      return;
+    }
+    if (act === 'save-prompts') {
+      const prompts = Object.fromEntries([...document.querySelectorAll('[data-prompt-name]')].map(element => [element.dataset.promptName, element.value]));
+      await api('/prompts', { method: 'POST', body: { prompts } });
+      S.prompts = null;
+      toast('提示词已保存');
+      await reloadTab();
+      return;
+    }
+    if (act === 'reset-prompts') {
+      if (!confirm('用内置默认稿覆盖当前全部后台提示词？此操作会立即保存。')) return;
+      const data = await api('/prompts/reset', { method: 'POST', body: {} });
+      S.prompts = data.prompts;
+      toast('已恢复默认并保存');
+      await renderSettings();
+      return;
+    }
+    if (act === 'test-llm') {
+      target.disabled = true;
+      try {
+        const r = await api('/llm/test', { method: 'POST', body: {} });
+        toast('连通正常：' + r.text);
+      } finally { target.disabled = false; }
+      return;
+    }
+  } catch (error) {
+    toast(error.message, true);
+  }
+});
+
+document.addEventListener('change', async (event) => {
+  const el = event.target;
+  if (el && el.id === 'user-io-file') {
+    const file = el.files && el.files[0];
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const box = document.getElementById('user-io');
+      if (box) box.classList.add('on');
+      const area = document.getElementById('user-io-text');
+      if (area) area.value = text;
+      toast('文件已读入（' + file.name + '），点「解析并填入」');
+    } catch (error) {
+      toast('读文件失败：' + error.message, true);
+    }
+    el.value = '';
+    return;
+  }
+  if (el && (el.id === 'vec-model-select' || el.id === 'vec-rerank-model-select')) {
+    if (!el.value) return;
+    const targetId = el.id === 'vec-model-select' ? 'vec-model' : 'vec-rerank-model';
+    document.getElementById(targetId).value = el.value;
+    setVectorState(el.id === 'vec-model-select' ? 'vec-state' : 'vec-rerank-state', '已填入 ' + el.value + '，记得点「保存向量配置」');
+    return;
+  }
+  if (el && el.dataset && el.dataset.act === 'skill-mode') {
+    const skill = el.dataset.id;
+    const mode = el.value;
+    try {
+      if (mode === 'auto') {
+        const mins = prompt('自动模式授权多久？单位分钟，到期自动收回：', '60');
+        if (mins === null) { el.value = S.skills?.items?.[skill]?.mode || 'confirm'; return; }
+        await api('/skills/grant', { method: 'POST', body: { skill, mode, minutes: Number(mins) || 60 } });
+        toast('已授权 ' + (Number(mins) || 60) + ' 分钟');
+      } else {
+        await api('/skills/grant', { method: 'POST', body: { skill, mode } });
+        toast(mode === 'off' ? '已关闭' : '已改为草案确认');
+      }
+      await reloadTab();
+    } catch (error) { toast(error.message, true); }
+    return;
+  }
+});
+
+document.getElementById('dlg-cancel').addEventListener('click', () => document.getElementById('dlg').close());
+document.getElementById('dlg-save').addEventListener('click', async () => {
+  const handler = S.dialogMode?.onSave;
+  if (!handler) return;
+  const values = {};
+  document.querySelectorAll('#dlg-body [data-key]').forEach((el) => { values[el.dataset.key] = el.value; });
+  try {
+    await handler(values);
+    document.getElementById('dlg').close();
+  } catch (error) {
+    toast(error.message, true);
+  }
+});
+
+document.getElementById('btn-refresh').addEventListener('click', async () => {
+  try { await reloadState(); await reloadTab(); toast('已刷新'); } catch (error) { toast(error.message, true); }
+});
+
+document.getElementById('btn-summary').addEventListener('click', async () => {
+  if (!S.char) return toast('先选一个角色', true);
+  const btn = document.getElementById('btn-summary');
+  btn.disabled = true;
+  btn.textContent = '总结中…';
+  try {
+    const r = await api('/summarize', { method: 'POST', body: { character: S.char } });
+    const res = r.result || {};
+    toast(`完成 ${res.done || 0} 批，跳过 ${res.skipped || 0} 批，空 ${res.empty || 0} 批` + (res.errors ? `，失败 ${res.errors}` : ''));
+    await reloadState();
+    if (S.tab === 'overview' || S.tab === 'memory') await reloadTab();
+  } catch (error) {
+    toast(error.message, true);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '立即总结';
+  }
+});
+
+(async function init() {
+  try {
+    await reloadState();
+    renderTabs();
+    await reloadTab();
+  } catch (error) {
+    document.getElementById('view').innerHTML = `<div class="empty">初始化失败：${esc(error.message)}</div>`;
+  }
+})();
+</script>
+</body>
+</html>

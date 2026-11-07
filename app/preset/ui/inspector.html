@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>WRX 请求抓包 · 适配器输入</title>
+<style>
+  :root{--bg:#0f1115;--panel:#171a21;--panel2:#1d212a;--fg:#e6e8ec;--dim:#8b93a1;--line:#272c36;--sys:#7aa2ff;--user:#69d19a;--asst:#c9a0ff;--tool:#7f8899}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);font:13px/1.6 -apple-system,"Segoe UI","Microsoft YaHei",sans-serif}
+  header{position:sticky;top:0;z-index:5;background:#12151b;border-bottom:1px solid var(--line);padding:10px 16px}
+  .row{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  h1{font-size:14px;margin:0;font-weight:600;letter-spacing:.02em}
+  .meta{color:var(--dim);font-size:12px}
+  .spacer{flex:1}
+  input[type=search]{background:#0d1015;border:1px solid var(--line);color:var(--fg);border-radius:8px;padding:7px 10px;font:inherit;min-width:240px}
+  button{background:var(--panel2);border:1px solid var(--line);color:var(--fg);border-radius:8px;padding:7px 12px;font:inherit;cursor:pointer}
+  button:hover{border-color:#3a4256}
+  main{padding:14px 16px 60px;max-width:1200px;margin:0 auto}
+  .msg{background:var(--panel);border:1px solid var(--line);border-radius:10px;margin-bottom:8px;overflow:hidden}
+  .head{display:flex;align-items:center;gap:10px;padding:9px 12px;cursor:pointer;user-select:none}
+  .head:hover{background:var(--panel2)}
+  .badge{font-size:11px;padding:2px 8px;border-radius:99px;border:1px solid currentColor;white-space:nowrap}
+  .r-system{color:var(--sys)} .r-user{color:var(--user)} .r-assistant{color:var(--asst)} .r-tool{color:var(--tool)}
+  .src{color:var(--dim);font-size:11px}
+  .chars{color:var(--dim);font-size:11px;margin-left:auto;white-space:nowrap}
+  .peek{color:#5f6775;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:42vw}
+  .body{display:none;border-top:1px solid var(--line);padding:6px 12px 12px}
+  .msg.open .body{display:block}
+  .block{border:1px solid var(--line);border-radius:8px;margin:8px 0;background:#141821}
+  .bhead{display:flex;align-items:center;gap:10px;padding:7px 10px;cursor:pointer}
+  .bhead:hover{background:var(--panel2)}
+  .btitle{font-weight:600;font-size:12.5px}
+  .btitle.plain{color:var(--dim);font-weight:400}
+  .bchars{color:var(--dim);font-size:11px;margin-left:auto;white-space:nowrap}
+  pre{margin:0;padding:10px 12px;border-top:1px solid var(--line);white-space:pre-wrap;word-break:break-word;font:12px/1.65 ui-monospace,Consolas,"Microsoft YaHei",monospace;color:#cfd4dd;display:none;max-height:70vh;overflow:auto}
+  .block.open pre{display:block}
+  .empty{color:var(--dim);padding:40px 0;text-align:center;line-height:2}
+  code{background:#0d1015;border:1px solid var(--line);border-radius:4px;padding:1px 5px;font-size:11.5px}
+  .legend{color:var(--dim);font-size:11.5px}
+</style>
+</head>
+<body>
+<header>
+  <div class="row">
+    <h1>WRX 请求抓包</h1><button id="start">开始抓包</button><button id="stop">停止抓包</button><button id="clear">清空</button><button id="download">导出 JSON</button>
+    <span class="meta" id="stat">读取中…</span>
+    <span class="spacer"></span>
+    <input id="q" type="search" placeholder="搜索内容（自动展开命中的段）">
+    <button id="refresh">刷新</button>
+    <button id="expandAll">全展开</button>
+    <button id="collapseAll">全收起</button>
+  </div>
+  <div class="row" style="margin-top:6px">
+    <span class="legend">复用 DSH Prompt Inspector 查看方式。记录 WRX 编排后的 llm/stream 适配器输入，不是最终 HTTP 请求体；其他插件后续仍可能改写。默认关闭，仅内存保留最近一次，重启清空，上限8 MiB；包含请求正文，导出前请核对。</span>
+  </div>
+</header>
+<main id="list"></main>
+<script>
+const API = '/plugins/dsh-wrx-memory/api/prompting/capture';
+const listEl = document.getElementById('list');
+const statEl = document.getElementById('stat');
+const qEl = document.getElementById('q');
+let DATA = null;
+
+function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+function fmt(n){return n>=1000 ? (n/1000).toFixed(1)+'k' : String(n)}
+
+// 按行首的【标题】/[标题] 切段；没有标题的碎块并到上一段。
+function splitBlocks(text){
+  const lines = String(text||'').split('\n');
+  const blocks = [];
+  let cur = { title: '', lines: [] };
+  const HEAD = /^\s*(【[^】]{1,60}】|\[[^\]]{1,40}\])/;
+  for (const line of lines){
+    const m = HEAD.exec(line);
+    if (m && line.trim().length <= 90){
+      if (cur.lines.some(l=>l.trim())) blocks.push(cur);
+      cur = { title: m[1], lines: [line] };
+    } else {
+      cur.lines.push(line);
+    }
+  }
+  if (cur.lines.some(l=>l.trim())) blocks.push(cur);
+  return blocks.map((b,i)=>({
+    title: b.title || (i===0?'（开头）':'（无标题续段）'),
+    text: b.lines.join('\n').replace(/\n{3,}/g,'\n\n').trim()
+  })).filter(b=>b.text);
+}
+
+function textOf(m){
+  return (m.blocks||[]).map(b=>b.type==='text' ? b.text||'' : JSON.stringify(b, null, 2)).join('\n');
+}
+
+function render(){
+  if(!DATA){return}
+  const msgs = DATA.messages||[];
+  const q = qEl.value.trim().toLowerCase();
+  listEl.innerHTML='';
+  let shown=0;
+
+  msgs.forEach((m)=>{
+    const text = textOf(m);
+    const cls = 'r-' + m.role;
+    const label = String(m.role || 'unknown').toUpperCase();
+    const src = m.source ? (typeof m.source === 'string' ? m.source : [m.source.kind, m.source.section].filter(Boolean).join(' / ')) : '—';
+    const blocks = splitBlocks(text);
+    const hit = q && text.toLowerCase().includes(q);
+    if (q && !hit) return;
+    shown++;
+
+    const el = document.createElement('div');
+    el.className='msg';
+    el.innerHTML =
+      '<div class="head">'+
+        '<span class="badge '+cls+'">'+esc(label)+'</span>'+
+        '<span class="src">'+esc(src)+'</span>'+
+        '<span class="peek">'+esc((text||'').replace(/\s+/g,' ').slice(0,90))+'</span>'+
+        '<span class="chars">'+fmt(text.length)+' 字 · '+blocks.length+' 段</span>'+
+      '</div>'+
+      '<div class="body"></div>';
+
+    const body = el.querySelector('.body');
+    blocks.forEach(b=>{
+      const bl = document.createElement('div');
+      bl.className='block';
+      bl.innerHTML =
+        '<div class="bhead">'+
+          '<span class="btitle'+(/^[（(]/.test(b.title)?' plain':'')+'">'+esc(b.title)+'</span>'+
+          '<span class="bchars">'+fmt(b.text.length)+' 字</span>'+
+        '</div>'+
+        '<pre></pre>';
+      const pre = bl.querySelector('pre');
+      if (q && b.text.toLowerCase().includes(q)) {
+        const i = b.text.toLowerCase().indexOf(q);
+        const s = Math.max(0, i-120), e = Math.min(b.text.length, i+q.length+400);
+        pre.textContent = (s>0?'…':'')+b.text.slice(s,e)+(e<b.text.length?'…':'');
+        bl.classList.add('open');
+      } else {
+        pre.textContent = b.text;
+      }
+      bl.querySelector('.bhead').addEventListener('click',()=>bl.classList.toggle('open'));
+      body.appendChild(bl);
+    });
+
+    el.querySelector('.head').addEventListener('click',()=>el.classList.toggle('open'));
+    if (q && hit) el.classList.add('open');
+    listEl.appendChild(el);
+  });
+
+  if (!shown){
+    listEl.innerHTML='<div class="empty">没有命中「'+esc(q)+'」的消息。<br>清空搜索框再试。</div>';
+  }
+  statEl.textContent = (DATA.model||'?')+' · '+msgs.length+' 条消息 · 命中 '+shown+' · 抓于 '+(DATA.at?new Date(DATA.at).toLocaleString('zh-CN'):'?');
+}
+
+async function load(){
+  try{
+    const r = await fetch(API+'?ts='+Date.now());
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    const state = await r.json();
+    document.getElementById('start').disabled = state.enabled;
+    document.getElementById('stop').disabled = !state.enabled;
+    DATA = state.latest;
+    if (!DATA) { statEl.textContent = state.enabled ? '抓包中，等待下一次模型调用' : '抓包已停止'; listEl.textContent = state.error || '暂无数据：点击开始抓包后发送一条消息，再刷新。'; return; }
+    render();
+    statEl.textContent = (state.enabled ? '抓包中 · ' : '已停止 · ') + statEl.textContent;
+  }catch(e){
+    statEl.textContent = '读不到抓包文件';
+    listEl.innerHTML =
+      '<div class="empty">'+
+      '还没有抓包数据。<br><br>'+
+      '插件监听的是 <code>llm/stream</code>，记录适配器输入。<br>'+
+      '确认插件已加载，点击开始抓包，再发送消息并刷新。'+
+      '<br><br><span style="color:#8b93a1">'+esc(String(e.message||e))+'</span>'+
+      '</div>';
+  }
+}
+
+document.getElementById('refresh').addEventListener('click',load);
+document.getElementById('expandAll').addEventListener('click',()=>{document.querySelectorAll('.msg,.block').forEach(x=>x.classList.add('open'))});
+document.getElementById('collapseAll').addEventListener('click',()=>{document.querySelectorAll('.msg,.block').forEach(x=>x.classList.remove('open'))});
+qEl.addEventListener('input',()=>render());
+async function control(value) {
+  try {
+    const response = await fetch(API, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(value) });
+    if (!response.ok) throw new Error('HTTP ' + response.status);
+    await load();
+  } catch (error) { statEl.textContent = error.message; }
+}
+document.getElementById('start').onclick = () => control({ enabled: true });
+document.getElementById('stop').onclick = () => control({ enabled: false });
+document.getElementById('clear').onclick = () => control({ clear: true });
+document.getElementById('download').onclick = () => {
+  if (!DATA) return;
+  const url = URL.createObjectURL(new Blob([JSON.stringify(DATA, null, 2)], { type: 'application/json' }));
+  const link = document.createElement('a'); link.href = url; link.download = 'wrx-adapter-input.json'; link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+};
+load();
+</script>
+</body>
+</html>
