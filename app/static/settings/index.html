@@ -1006,7 +1006,7 @@ async function renderSettings() {
 
     <div class="panel">
       <h3>提示词</h3>
-      <p class="hint">保存会直接覆盖模块内 Markdown；恢复默认会用独立默认稿立即覆盖全部后台提示词。四表 JSON、recall、optimize/unchanged 等输出协议需与后端保持一致。</p>
+      <p class="hint">保存到用户数据目录，升级插件保留；没有保存稿时使用默认稿。恢复默认会立即替换全部后台提示词。四表 JSON、recall、optimize/unchanged 等输出协议需与后端保持一致。</p>
       ${Object.entries(S.prompts).map(([name, text]) => '<div class="field"><label>' + esc(({system:'第一段 · 四表提取',update:'第二段 · 冷记录核对',diary:'每日日记',diaryInstant:'即时日记',diaryMerge:'即时日记合并',activity:'外出记录',profile:'用户画像',selfProfile:'角色画像',MERGE_INSTRUCTION:'四表分段合并',DIARY_SEGMENT_INSTRUCTION:'长日记分段',DIARY_MERGE_INSTRUCTION:'每日日记合并',skillPersona:'技能 · 人设',skillUser:'技能 · 用户',skillMemory:'技能 · 记忆',skillPreset:'技能 · 预设'})[name] || name) + '（' + esc(name) + '）</label><textarea data-prompt-name="' + esc(name) + '" style="min-height:180px">' + esc(text) + '</textarea></div>').join('')}
       <div class="flex">
         <button class="primary" data-act="save-prompts">保存提示词</button>

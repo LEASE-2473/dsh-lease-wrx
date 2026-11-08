@@ -1,10 +1,12 @@
 import { isHumanMessage, messageTime } from '../../prompting/history/index.js';
 
-export function presentRequest(messages, { timestamps = {}, midConversationSystem = 'preserve', timeZone = 'Asia/Shanghai' } = {}, messageTimes = {}) {
+export function presentRequest(messages, { timestamps = {}, midConversationSystem = 'preserve', timeZone = 'Asia/Shanghai', excludeModelSelection = false } = {}, messageTimes = {}) {
   if (!['preserve', 'user'].includes(midConversationSystem)) throw new Error('midConversationSystem 必须为 preserve 或 user');
+  if (typeof excludeModelSelection !== 'boolean') throw new Error('excludeModelSelection 必须是布尔值');
+  const selected = excludeModelSelection ? messages.filter(message => (message.source?.kind ?? message.source) !== 'model-selection') : messages;
   const warnings = [];
   let started = false;
-  const presented = messages.map(message => {
+  const presented = selected.map(message => {
     let next = message;
     if (timestamps.enabled && isHumanMessage(message) && !message.leaseWrxTimestamp) {
       const time = messageTime(message, messageTimes);
@@ -12,7 +14,7 @@ export function presentRequest(messages, { timestamps = {}, midConversationSyste
       else {
         const zone = timestamps.timeZone || timeZone;
         const clock = new Intl.DateTimeFormat('zh-CN', { timeZone: zone, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }).format(time);
-        next = { ...message, leaseWrxTimestamp: true, content: [{ type: 'text', text: `【消息时间：${clock}（${zone}）】\n` }, ...(message.content ?? [])] };
+        next = { ...message, leaseWrxTimestamp: true, content: [{ type: 'text', text: `【消息时间：${clock}】\n` }, ...(message.content ?? [])] };
       }
     }
     if (['system', 'developer'].includes(message.role)) {
@@ -23,6 +25,6 @@ export function presentRequest(messages, { timestamps = {}, midConversationSyste
     } else started = true;
     return next;
   });
-  if (midConversationSystem === 'user' && presented.some((message, index) => message.role !== messages[index].role)) warnings.push('已将历史中间的 system/developer 转为 user 以保持传输顺序；角色优先级随之改变');
+  if (midConversationSystem === 'user' && presented.some((message, index) => message.role !== selected[index].role)) warnings.push('已将历史中间的 system/developer 转为 user 以保持传输顺序；角色优先级随之改变');
   return { messages: presented, warnings: [...new Set(warnings)] };
 }

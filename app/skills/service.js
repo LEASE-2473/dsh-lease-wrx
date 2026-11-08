@@ -130,7 +130,7 @@ function extractJson(text) {
 function transcriptOf(messages) {
   return messages.map((m) => {
     const who = m.role === 'user' ? '用户' : m.role === 'assistant' ? '助手' : String(m.role || '')
-    return `${who}：${String(m.content || '').slice(0, 2000)}`
+    return `${who}：${String(m.content || '')}`
   }).join('\n')
 }
 
@@ -142,7 +142,7 @@ function draftTitle(skill, data) {
   return '草案'
 }
 
-const MAX_TOKENS = { persona: 4096, user: 4096, memory: 8000, preset: 4096 }
+// 草案不设置本地输出上限；端点容量不足时明确失败。
 
 export async function draftSkill(ctx, skill, opts = {}) {
   if (!SKILLS[skill]) throw new Error('未知技能：' + skill)
@@ -153,7 +153,7 @@ export async function draftSkill(ctx, skill, opts = {}) {
   const start = new Date(end.getTime() - hours * 3600000)
   const messages = await readDshMessages(ctx, { character: charId(), start: start.toISOString(), end: end.toISOString() })
   if (!messages || !messages.length) throw new Error(`最近 ${hours} 小时没有聊天记录，先聊两句再来起草`)
-  const transcript = transcriptOf(messages).slice(-60000)
+  const transcript = transcriptOf(messages)
   const cfg = loadConfig()
   const character = characterDoc(charId())
   const user = readUser()
@@ -187,7 +187,7 @@ export async function draftSkill(ctx, skill, opts = {}) {
   const raw = await complete(ctx, cfg, {
     system,
     messages: [{ role: 'user', text: payload }],
-    maxTokens: MAX_TOKENS[skill] || 4096,
+    maxTokens: 0,
   })
   const data = extractJson(raw)
   const draft = {
@@ -209,7 +209,7 @@ function sanitizeCharacter(data) {
   const out = {}
   for (const key of CHARACTER_FIELDS) {
     if (data?.[key] === undefined || data?.[key] === null) continue
-    out[key] = String(data[key]).slice(0, 8000)
+    out[key] = String(data[key])
   }
   if (out.name !== undefined && !out.name.trim()) delete out.name
   return out

@@ -6,6 +6,7 @@ import { characters, hasDiary, listActivity, revertStalePending, beginColdDiarie
 import { backfillVectors } from './recall.js';
 import { summarizeRange, generateDiary, generateActivity } from './summarize.js';
 import { runProfileJob, runSelfProfileJob } from './profile.js';
+import { pruneProfileHistories } from '../profile/documents.js';
 export function registerMemoryScheduler(ctx, { running = new Set(), timers = { setInterval, clearInterval } } = {}) {
   // 后台任务：总结 / 日记 / 外出报告，共用一个 60 秒心跳。
   ctx.effect(() => {
@@ -226,6 +227,7 @@ export function registerMemoryScheduler(ctx, { running = new Set(), timers = { s
     };
 
     const tick = async () => {
+      try { pruneProfileHistories(); } catch (error) { ctx.logger?.warn?.('[wrx-memory] 清理画像历史：' + error.message); }
       const globalConfig = loadConfig();
       if (globalConfig.profile?.enabled !== false) {
         try { await tickProfile(globalConfig); } catch (error) { ctx.logger?.warn?.('[wrx-memory] 用户画像：' + error.message); }

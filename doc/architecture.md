@@ -22,10 +22,10 @@
 
 app/index.js负责宿主组装与路由分发。memory/db.js、summarize.js、profile.js分别统一导出仓储、后台生成与画像任务，业务实现写在所属功能模块；preset/service.js提供预设业务服务与资料宏格式化。
 
-后台提示词属于功能模块的 prompts，页面直接读写同一份 Markdown；路径白名单位于 app/memory/common/prompt_files.js，不再读取 data/prompts 或 JSON 正文覆盖。app/preset 管理主聊天预设，app/prompting 编排实际消息，两者职责不同。工具 schema 与可移动工具说明分开。
+后台提示词的相对路径按功能模块组织，页面只读写运行数据目录prompts/active中的用户稿；没有用户稿时依次使用prompts/defaults和安装包defaults/prompts的默认稿。读取默认只补缺失的用户目录默认稿，保存才生成active稿，不改安装文件；不自动采用旧prompts其他路径或JSON正文。路径白名单位于app/memory/common/prompt_files.js。app/preset管理用户目录中的主聊天预设，app/prompting编排实际消息。用户/角色资料、画像及技能草案也都存运行数据目录；安装包仅提供代码和通用默认值。
 
 编译器只处理传入快照，不访问数据库或模型；宿主依赖留在 integrations。工具调用和结果不可拆，新输入才刷新动态素材。结构化宏不能混作普通字符串。
 
-资源根路径由 common/paths.js 统一确定，数据目录允许 LEASE_WRX_DATA_DIR；发布白名单与新资源同步维护。个人预设与角色资料不作为源码或发行资产。根目录维护中文连续性文档，不在子目录重复创建。
+资源根路径和数据目录由 common/paths.js 统一确定。数据目录优先使用 LEASE_WRX_DATA_DIR，否则使用 DSH_HOME/dsh-wrx-memory；仅配置 LEASE_WRX_DSH_ROOT 时使用该目录下的 dsh-wrx-memory，无宿主配置时回退插件目录下的 data。运行模块与开发初始化使用同一规则；发布白名单与新资源同步维护。个人预设与角色资料不作为源码或发行资产。根目录维护中文连续性文档，不在子目录重复创建。
 
 宿主接入只依赖DSH原生服务；不包含其他插件的工具、凭证读取或个人部署脚本。请求接入与供应商能力配置是发行包维护的适配层，见integrations/dsh/README.md。

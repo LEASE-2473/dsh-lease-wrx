@@ -6,8 +6,8 @@ import { rowsMissingVector, rowsWithVector, saveVector } from './common/vectors.
 import { embedTexts, recall } from '../providers/vectorapi.js';
 
 const MIN_BLOCK_CHARS = 0;
-const MAX_BLOCK_CHARS = 1400;
-const MAX_LINE_CHARS = 400;
+
+
 
 let inflight = null;
 
@@ -89,17 +89,17 @@ export async function recallBlock(characterId, query, { topK, threshold, allowKi
     return item.rerank === 'applied' ? score >= 0 : score >= th;
   });
   const lines = [];
-  let used = 0;
+
   for (const item of kept) {
     const body = String(item.row?.text || item.row?.content || '').replace(/\s+/g, ' ').trim();
     if (!body) continue;
     // 一条记忆就是一个召回单位，整条注入，不按字数切。
-    // 预算只决定「还塞不塞得下下一条」，不切当前这条。
+    // 所有通过显式topK和阈值筛选的结果均完整注入，不再暗中丢弃后续结果。
     const when = fmtWhen(item.row);
     const line = (when ? '[' + when + '] ' : '') + body;
-    if (lines.length && used + line.length + 2 > MAX_BLOCK_CHARS) break;
+
     lines.push('· ' + line);
-    used += line.length + 2;
+
   }
   if (!lines.length) return { text: '', hits: [] };
   const text = '# 长期记忆（按当前话题向量召回，含冷记录）\n'
@@ -112,7 +112,7 @@ export async function recallBlock(characterId, query, { topK, threshold, allowKi
       kind: item.row?.kind,
       score: Number(item.score),
       rerank: item.rerank || 'none',
-      text: String(item.row?.text || '').slice(0, 120),
+      text: String(item.row?.text || ''),
     })),
   };
 }

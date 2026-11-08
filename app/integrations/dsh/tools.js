@@ -14,6 +14,25 @@ import {
   updateCharacterDoc,
 } from '../../memory/db.js';
 
+// 宿主先执行严格 JSON 快照；不要依赖 JSON.stringify 对特殊对象的隐式转换。
+export function toolJson(value, ancestors = new Set()) {
+  if (value === null || typeof value === 'string' || typeof value === 'boolean') return value;
+  if (typeof value === 'number') return Number.isFinite(value) ? value : String(value);
+  if (typeof value === 'bigint') return String(value);
+  if (typeof value !== 'object') return null;
+  if (value instanceof Date) return Number.isFinite(value.getTime()) ? value.toISOString() : null;
+  if (ArrayBuffer.isView(value) || value instanceof ArrayBuffer) return { type: 'blob', bytes: value.byteLength };
+  if (ancestors.has(value)) throw new TypeError('WRX 工具结果存在循环引用');
+  ancestors.add(value);
+  try {
+    return Array.isArray(value)
+      ? Array.from(value, item => toolJson(item, ancestors))
+      : Object.fromEntries(Object.entries(value).map(([key, item]) => [key, toolJson(item, ancestors)]));
+  } finally {
+    ancestors.delete(value);
+  }
+}
+
 const PERSONA_FIELDS = ['name', 'user_name', 'personality', 'background', 'relationship', 'speaking_style', 'system_prompt', 'persona'];
 
 function currentCharacter() {
@@ -60,7 +79,7 @@ export function registerTools(ctx) {
         if (!session || session.header?.parentSession) throw new Error('当前会话不启用 WRX');
         const role = bindSession(session, ctx);
         if (!role.enabled) throw new Error('当前 Agent Preset 不启用 WRX');
-        return withRole(role, () => execute(args, execution));
+        return Promise.resolve(withRole(role, () => execute(args, execution))).then(value => toolJson(value));
       } }));
     } catch (error) {
       ctx.logger?.warn?.('[wrx-memory] 注册工具失败 ' + definition.name + ': ' + error?.message);
@@ -166,7 +185,7 @@ export function registerTools(ctx) {
       const content = String(args?.content || '').trim();
       if (!tag || !content) throw new Error('tag 和 content 都要有');
       const keywords = Array.isArray(args?.keywords)
-        ? args.keywords.map((word) => String(word).trim()).filter(Boolean).slice(0, 6)
+        ? args.keywords.map((word) => String(word).trim()).filter(Boolean)
         : [];
       const id = saveCandidate({ tag, keywords, content });
       return { text: '候选已提交（' + tag + '），每日任务会审。', id };
@@ -242,10 +261,10 @@ export function registerTools(ctx) {
       if (!title || !content) throw new Error('title 和 content 都要有');
       const note = String(args?.note || '').trim() || content;
       const id = saveActivity(currentCharacter(), {
-        activityType: title.slice(0, 60),
-        activityContent: content.slice(0, 4000),
+        activityType: title,
+        activityContent: content,
         content: note,
-        mood: String(args?.mood || '').trim().slice(0, 200),
+        mood: String(args?.mood || '').trim(),
       });
       return { text: '已记一条外出：' + title, id };
     },
@@ -276,7 +295,12 @@ export function registerTools(ctx) {
             (row.activity_content || row.content || '')
         )
         .join('\n');
-      return { text, rows };
+      return { text, rows: rows.map(row => ({
+        memory_id: row.memory_id, activity_id: row.activity_id,
+        activity_type: row.activity_type, activity_content: row.activity_content,
+        content: row.content, occurred_at: row.occurred_at, created_at: row.created_at,
+        updated_at: row.updated_at, injection_mode: row.injection_mode,
+      })) };
     },
   });
 

@@ -23,12 +23,13 @@ export function sectionSources(assembly) {
   }
   return result;
 }
-export function collectDshSources({ messages = [], assembly, tools = [] }) {
+export function collectDshSources({ messages = [], assembly, tools = [], cwd }) {
   const sections = assembly?.sections ?? [];
   const native = sections.filter(s => !s.name?.startsWith('wrx:'));
   const tool = s => /tool|mcp|sdk/i.test(s.name ?? '');
   const skill = s => /skill/i.test(s.name ?? '');
   return {
+    'dsh.cwd': typeof cwd === 'string' ? cwd : '',
     _dshSections: sectionSources(assembly).filter(source => source.category === 'sections'),
     ...Object.fromEntries(sectionSources(assembly).map(source => [source.name, source.text])),
     'dsh.preset': sections.length ? texts(native.filter(s => !tool(s) && !skill(s))) : messages.filter(m => m.role === 'system').map(m => texts(m.content ?? [])).join('\n\n'),
@@ -68,7 +69,7 @@ export function registerRequestHook({ loadState, loadConfig, loadSources = () =>
     const key = splitConversation(input.messages, config.historyTurns ?? 30).key;
     let options = presentation.get(input.sessionId);
     if (!options || options.key !== key || options.roleKey !== input.roleKey) {
-      options = { key, roleKey: input.roleKey, messageTimes: structuredClone(input.messageTimes ?? {}), options: structuredClone({ timestamps: config.timestamps ?? {}, midConversationSystem: config.midConversationSystem ?? 'preserve', timeZone: loaded.timezone || 'Asia/Shanghai' }) };
+      options = { key, roleKey: input.roleKey, messageTimes: structuredClone(input.messageTimes ?? {}), options: structuredClone({ excludeModelSelection: config.excludeModelSelection === true, timestamps: config.timestamps ?? {}, midConversationSystem: config.midConversationSystem ?? 'preserve', timeZone: loaded.timezone || 'Asia/Shanghai' }) };
       presentation.delete(input.sessionId);
       presentation.set(input.sessionId, options);
       if (presentation.size > 100) presentation.delete(presentation.keys().next().value);

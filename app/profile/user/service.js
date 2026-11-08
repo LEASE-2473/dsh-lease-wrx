@@ -80,27 +80,28 @@ export async function runProfileJob(ctx, { date, force = false } = {}) {
         : '（无）',
       '',
       '【当天用户本人的发言】',
-      said.slice(0, 500).map((text) => '- ' + text.slice(0, 600)).join('\n') || '（无）',
+      said.map((text) => '- ' + text).join('\n') || '（无）',
     ].join('\n');
 
     const text = await complete(ctx, cfg, {
-      system: profilePrompt(cfg),
+      system: profilePrompt(cfg) + '\n\n【画像完整性优先】完整保留所有仍有效的身份事实及必要限定。不设字数、条数或关键词数量上限；不得为长度或 token 预算省略、截断旧资料或新事实。只在有明确依据时纠正或合并，返回完整画像。',
       messages: [{ role: 'user', text: input }],
       // 不设输出上限（0 = 交给服务端默认）。WRX 的画像总结就是不设。
-      maxTokens: Number(cfg.profile?.maxTokens) || 0,
+      maxTokens: 0,
+      requireComplete: true,
     });
     const parsed = extractJson(text);
     if (!Array.isArray(parsed?.entries)) throw new Error('画像输出缺少 entries：' + String(text || '').slice(0, 200));
+    if (parsed.entries.some(entry => !entry || typeof entry.content !== 'string' || !entry.content.trim())) throw new Error('画像条目正文无效，保留原画像');
 
     const entries = parsed.entries
       .filter((entry) => entry && typeof entry.content === 'string' && entry.content.trim())
-      .slice(0, 40)
       .map((entry) => ({
         tag: String(entry.tag || '').trim() || '未分类',
         keywords: Array.isArray(entry.keywords)
-          ? entry.keywords.map((word) => String(word).trim()).filter(Boolean).slice(0, 6)
+          ? entry.keywords.map((word) => String(word).trim()).filter(Boolean)
           : [],
-        content: String(entry.content).trim().slice(0, 400),
+        content: entry.content,
       }));
 
     const saved = writeUser({ name: profile.name, core: profile.core, entries });

@@ -2,13 +2,13 @@ import { getRole, saveRole } from './roles.js';
 import { currentRole, scopedConfig, withRole } from './role-context.js';
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { PLUGIN_DIR } from './paths.js';
+import { resolveDataDir } from './paths.js';
 export { PLUGIN_DIR } from './paths.js';
 import { readPromptSet, writePrompt, PROMPT_FILES } from '../memory/common/prompt_files.js';
 import { resolveAssistantTarget } from './assistant-target.js';
 
 
-export const DATA_DIR = process.env.LEASE_WRX_DATA_DIR || join(PLUGIN_DIR, 'data');
+export const DATA_DIR = resolveDataDir();
 export const CONFIG_PATH = join(DATA_DIR, 'config.json');
 export const LOG_PATH = join(DATA_DIR, 'wrx-memory.log');
 export const DEFAULT_DB = join(DATA_DIR, 'dsh.sqlite3');
@@ -122,7 +122,7 @@ export function loadConfig() {
     console.error('[wrx-memory] 读取配置失败，使用默认值：', error);
   }
   if (raw?.prompts && Object.keys(raw.prompts).length) {
-    throw new Error('检测到旧 config.prompts，请先迁移提示词正文到 app 对应模块的 Markdown 文件，再移除 JSON 中的 prompts；不能静默覆盖或忽略旧正文。');
+    throw new Error('检测到旧 config.prompts，请先迁移提示词正文到用户数据目录 prompts/active 对应的 Markdown 文件，再移除 JSON 中的 prompts；不能静默覆盖或忽略旧正文。');
   }
   delete raw.prompts;
   cache = resolveAssistantTarget(merge(defaultConfig(), raw || {}));

@@ -31,7 +31,7 @@ export async function generateDiary(ctx, { character, date, debug = false }) {
   }
   if (!messages.length) throw new Error('这一天没有对话，写不出日记');
   // 当天的外出记录也塞进材料：不然白天出去逛了什么，写日记时看不见（2026-10-26 LEASE 定的）。
-  const activities = listActivity(character, 40)
+  const activities = listActivity(character, -1)
     .filter(n => n.injection_mode !== 'freeze')
     .filter((n) => {
       const at = String(n.occurred_at || n.created_at || '');
@@ -39,7 +39,7 @@ export async function generateDiary(ctx, { character, date, debug = false }) {
     })
     .map((n) => ({
       type: n.activity_type || '活动',
-      content: String(n.activity_content || n.content || '').slice(0, 1200),
+      content: String(n.activity_content || n.content || ''),
     }));
   const payloadBase = {
     character: char.name,
@@ -49,7 +49,7 @@ export async function generateDiary(ctx, { character, date, debug = false }) {
     ...(activities.length ? { activities } : {}),
   };
   // 不再静默裁掉最早的部分：先算总量，装得下就一次写，装不下就分段写再合。
-  const full = messages.map((m) => ({ time: m.time, role: m.role, content: String(m.content || '').slice(0, 3000) }));
+  const full = messages.map((m) => ({ time: m.time, role: m.role, content: String(m.content || '') }));
   const totalChars = full.reduce((n, m) => n + m.content.length, 0);
   const maxChars = Math.max(20000, Number(cfg.diary?.maxChars) || DEFAULT_MAX_INPUT_CHARS);
   let raw;

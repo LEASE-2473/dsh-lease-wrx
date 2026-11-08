@@ -16,13 +16,13 @@ export function createPresetApi({ sources = () => ({}), loadConfig, getSourceCat
       if (!currentRole()) throw new Error('保存预设必须指定管理角色');
       return presetStore.save({ ...value, active_preset_id: presetStore.load().active_preset_id });
     },
-  }, getMacros: () => [...listMacros(), ...getSourceCatalog()], preview: ({ state, history = [], currentUser = '', historyWindow, timestamps, midConversationSystem }) => {
+  }, getMacros: () => [...listMacros(), ...getSourceCatalog()], preview: ({ state, history = [], currentUser = '', historyWindow, timestamps, midConversationSystem, excludeModelSelection }) => {
     if (!Array.isArray(history)) throw new Error('历史必须是消息数组');
     const messages = [...history, { role: 'user', source: { kind: 'user' }, content: [{ type: 'text', text: String(currentUser) }] }];
     const { _historyWindow, _sharedHistory, ...provided } = sources({ historyWindow });
     const config = loadConfig();
     const result = compilePrompt({ state, messages, sources: provided, historyWindow: _historyWindow, sharedHistory: _sharedHistory, historyTurns: config.prompting?.historyTurns ?? 30 });
-    const rendered = presentRequest(result.messages, { timestamps: timestamps ?? config.prompting?.timestamps, midConversationSystem: midConversationSystem ?? config.prompting?.midConversationSystem, timeZone: config.timezone });
+    const rendered = presentRequest(result.messages, { excludeModelSelection: excludeModelSelection ?? config.prompting?.excludeModelSelection, timestamps: timestamps ?? config.prompting?.timestamps, midConversationSystem: midConversationSystem ?? config.prompting?.midConversationSystem, timeZone: config.timezone });
     return { ...result, messages: rendered.messages, warnings: [...result.warnings, ...rendered.warnings] };
   } });
 }

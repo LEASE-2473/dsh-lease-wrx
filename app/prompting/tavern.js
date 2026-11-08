@@ -90,7 +90,7 @@ function diaryBlock(characterId, days) {
   const tz = loadConfig().timezone || 'Asia/Shanghai'
   const cutoff = new Date(Date.now() - days * 86400000).toISOString().slice(0, 10)
   // 只注入「热」的：冷 = 已向量化走召回，转冷中 = 还没转完，两个都不进上下文。
-  const list = (listDiary(characterId, 20) || []).filter((d) => d.diary_date >= cutoff && d.injection_mode === 'hot')
+  const list = (listDiary(characterId, -1) || []).filter((d) => d.diary_date >= cutoff && d.injection_mode === 'hot')
   if (!list.length) return ''
   return '[最近日记｜背景资料]\n' + list.map((d) => '[' + d.diary_date + '] ' + (d.title || '') + '\n' + d.content).join('\n\n')
 }
@@ -98,7 +98,7 @@ function diaryBlock(characterId, days) {
 function activityBlock(characterId, days) {
   const tz = loadConfig().timezone || 'Asia/Shanghai'
   const cutoff = new Date(Date.now() - days * 86400000).toISOString()
-  const list = (listActivity(characterId, 20) || []).filter((n) =>
+  const list = (listActivity(characterId, -1) || []).filter((n) =>
     String(n.occurred_at || n.created_at || '') >= cutoff && n.injection_mode === 'hot')
   if (!list.length) return ''
   return '[最近外出｜背景资料]\n' + list.map((n) =>

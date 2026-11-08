@@ -9,7 +9,7 @@ import { readMessages } from '../common/conversations.js';
 import { readUser } from '../../profile/user/repository.js';
 import { saveActivity } from './repository.js';
 
-import { extractJson, trimMessages } from '../common/generation.js';
+import { extractJson } from '../common/generation.js';
 
 export async function generateActivity(ctx, { character, hours = 24, debug = false }) {
   const cfg = loadConfig();
@@ -30,7 +30,7 @@ export async function generateActivity(ctx, { character, hours = 24, debug = fal
     persona: char.persona || '',
     date: new Date().toISOString().slice(0, 10),
     timezone: cfg.timezone,
-    messages: trimMessages(messages).map((m) => ({ time: m.time, role: m.role, content: m.content })),
+    messages: messages.map((m) => ({ time: m.time, role: m.role, content: m.content })),
   };
   const raw = await complete(ctx, cfg, {
     system: cfg.prompts.activity,
@@ -41,10 +41,10 @@ export async function generateActivity(ctx, { character, hours = 24, debug = fal
   const content = String(out.note || out.activity_content || out.content || '').trim();
   if (!content) throw new Error('模型没有返回活动内容');
   const id = saveActivity(character, {
-    activityType: String(out.activity_type || '自主活动').slice(0, 60),
-    activityContent: String(out.activity_content || '').slice(0, 4000),
+    activityType: String(out.activity_type || '自主活动'),
+    activityContent: String(out.activity_content || ''),
     content,
-    mood: String(out.mood || '').slice(0, 200),
+    mood: String(out.mood || ''),
   });
   return { id, activityType: out.activity_type || '', note: content, ...(debug ? { raw } : {}) };
 }

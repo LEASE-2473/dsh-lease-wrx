@@ -339,6 +339,10 @@ export function apply(ctx) {
         if (body.baseConfig && JSON.stringify(body.baseConfig) !== JSON.stringify(withRole(getRole(character), () => loadConfig().prompting))) throw new Error('角色编排设置已变化，请重新读取');
         const historyWindow = normalizeHistoryWindow(body.historyWindow, body.historyTurns);
         const presentation = {};
+        if (body.excludeModelSelection !== undefined) {
+          if (typeof body.excludeModelSelection !== 'boolean') return json(res, 400, { error: 'excludeModelSelection 必须是布尔值' });
+          presentation.excludeModelSelection = body.excludeModelSelection;
+        }
         if (body.timestamps !== undefined) {
           if (!body.timestamps || typeof body.timestamps.enabled !== 'boolean' || (body.timestamps.timeZone !== undefined && typeof body.timestamps.timeZone !== 'string')) return json(res, 400, { error: 'timestamps 需要布尔 enabled 和有效时区 timeZone' });
           const timeZone = body.timestamps.timeZone?.trim() || 'Asia/Shanghai';

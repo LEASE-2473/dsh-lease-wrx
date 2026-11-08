@@ -196,8 +196,8 @@ export function applyFourTables(characterId, conversationId, start, end, output,
       .filter((s) => s && String(s.content || '').trim());
     for (const item of summaries) {
       const clean = {
-        content: String(item.content || '').slice(0, 1200),
-        tag: String(item.tag || '').slice(0, 120),
+        content: String(item.content || ''),
+        tag: String(item.tag || ''),
       };
       insertRowInner(d, characterId, 'summary', clean, conversationId, start, end);
       applied.summary++;
@@ -246,7 +246,7 @@ export function applyFourTables(characterId, conversationId, start, end, output,
       }
     }
     for (const item of (Array.isArray(output?.agreements) ? output.agreements : [])) {
-      const content = String(item?.content || '').slice(0, 1000).trim();
+      const content = String(item?.content || '').trim();
       if (!content) continue;
       const exists = d.prepare('SELECT 1 FROM system_agreements WHERE character_id=? AND content=?').get(characterId, content);
       if (exists) continue;

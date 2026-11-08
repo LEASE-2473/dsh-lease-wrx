@@ -2,10 +2,11 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { resolveDataDir } from '../app/common/paths.js';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
-export function initializeData(dataDir = process.env.LEASE_WRX_DATA_DIR || join(ROOT, 'data')) {
+export function initializeData(dataDir = resolveDataDir()) {
   const presetSeed = join(ROOT, 'app', 'preset', 'defaults', 'presets.json');
   const presets = JSON.parse(readFileSync(presetSeed, 'utf8').replace(/^\uFEFF/, ''));
   if (!Array.isArray(presets.presets)) throw new Error('预设种子缺少 presets');

@@ -4,6 +4,7 @@ function textMessages(messages) {
 
 function finishError(reason) {
   const kind = reason?.kind;
+  if (kind === 'max-tokens') return new Error('模型输出因长度上限中断，拒绝保存不完整结果；保留原画像及其他原资料');
   if (kind === 'error' || kind === 'aborted') {
     const failure = reason.failure || {};
     const err = new Error(failure.message || ('模型调用' + (kind === 'aborted' ? '被取消' : '失败')));
@@ -13,9 +14,9 @@ function finishError(reason) {
   return null;
 }
 
-export async function complete(ctx, cfg, { system, messages, maxTokens = 2048, sessionId = 'lease-wrx-background' }) {
+export async function complete(ctx, cfg, { system, messages, maxTokens = 2048, sessionId = 'lease-wrx-background', requireComplete = false }) {
   const llmCfg = cfg.llm || {};
-  if (llmCfg.mode === 'endpoint') return endpointComplete(llmCfg, { system, messages, maxTokens });
+  if (llmCfg.mode === 'endpoint') return endpointComplete(llmCfg, { system, messages, maxTokens, requireComplete });
 
   const service = typeof ctx.get === 'function' ? ctx.get('llm') : ctx.llm;
   if (!service) throw new Error('DSH 的 llm 服务不可用；请改「独立端点」模式');
@@ -65,6 +66,7 @@ export async function complete(ctx, cfg, { system, messages, maxTokens = 2048, s
     clearTimeout(timer);
   }
   // 空输出单独报——不然上层只会说「没有 JSON」，看不出是块类型不对、还是推理把额度吃光了。
+  if (requireComplete && lastFinish?.kind !== 'stop') throw new Error('画像模型输出未确认完整结束（' + (lastFinish?.kind || '缺少结束标记') + '），保留原画像');
   if (!out.trim()) {
     throw new Error('模型没有返回文本（收到的块：' + JSON.stringify(seen)
       + '；结束原因：' + JSON.stringify(lastFinish).slice(0, 300) + '）');
@@ -72,7 +74,7 @@ export async function complete(ctx, cfg, { system, messages, maxTokens = 2048, s
   return out;
 }
 
-async function endpointComplete(llmCfg, { system, messages, maxTokens }) {
+async function endpointComplete(llmCfg, { system, messages, maxTokens, requireComplete }) {
   const base = String(llmCfg.baseURL || '').replace(/\/$/, '');
   if (!base) throw new Error('独立端点模式需要填写 baseURL');
   const key = llmCfg.apiKey || (llmCfg.apiKeyEnv ? process.env[llmCfg.apiKeyEnv] : '') || '';
@@ -84,7 +86,7 @@ async function endpointComplete(llmCfg, { system, messages, maxTokens }) {
       ...messages.map((m) => ({ role: m.role, content: m.text })),
     ],
     temperature: Number(llmCfg.temperature ?? 0.2),
-    max_tokens: maxTokens,
+    ...(Number(maxTokens) > 0 ? { max_tokens: Number(maxTokens) } : {}),
     stream: false,
   };
   const controller = new AbortController();
@@ -99,6 +101,8 @@ async function endpointComplete(llmCfg, { system, messages, maxTokens }) {
     const text = await res.text();
     if (!res.ok) throw new Error('模型接口错误 HTTP ' + res.status + '：' + text.slice(0, 500));
     const json = JSON.parse(text);
+    if (json?.choices?.[0]?.finish_reason === 'length') throw new Error('模型输出因长度上限中断，拒绝保存不完整结果；保留原画像及其他原资料');
+    if (requireComplete && json?.choices?.[0]?.finish_reason !== 'stop') throw new Error('画像模型输出未确认完整结束，保留原画像');
     const content = json?.choices?.[0]?.message?.content;
     if (typeof content !== 'string') throw new Error('模型返回格式异常：' + text.slice(0, 300));
     return content;

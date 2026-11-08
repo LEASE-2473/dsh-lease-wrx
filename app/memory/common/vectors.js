@@ -10,8 +10,8 @@ const VECTOR_TEXT = {
   item: (r) => ['[物品] ' + (r.name || ''), r.description, r.location].filter(Boolean).join('；'),
   agreement: (r) => '[约定] ' + (r.content || ''),
   // 日记 / 外出记录转冷后要靠向量召回，不能关进小黑屋。
-  diary: (r) => '[日记 ' + (r.diary_date || '') + '] ' + (r.title || '') + '：' + String(r.content || '').slice(0, 900),
-  activity: (r) => '[外出 ' + (r.activity_type || '') + '] ' + String(r.activity_content || r.content || '').slice(0, 900),
+  diary: (r) => '[日记 ' + (r.diary_date || '') + '] ' + (r.title || '') + '：' + String(r.content || ''),
+  activity: (r) => '[外出 ' + (r.activity_type || '') + '] ' + String(r.activity_content || r.content || ''),
 };
 
 /** 一行记忆拿去算向量的文本（跟 Tavily/温柔乡一致：拼成一句可读的话）。 */

@@ -1,6 +1,6 @@
 {
   "name": "dsh-wrx-memory",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "WRX 多角色记忆与上下文编排插件：四表总结、日记、自主活动、画像、原生工具与请求抓包。",
   "type": "module",
   "main": "./app/index.js",

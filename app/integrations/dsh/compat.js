@@ -1,5 +1,5 @@
-import { readFileSync, writeFileSync, existsSync } from 'node:fs';
-import { join } from 'node:path';
+import { readFileSync, writeFileSync, existsSync, realpathSync } from 'node:fs';
+import { dirname, join } from 'node:path';
 import { PLUGIN_DIR, dshRoot } from '../../common/paths.js';
 export { PLUGIN_DIR } from '../../common/paths.js';
 
@@ -8,7 +8,24 @@ const ROOT = dshRoot();
 const MARK_MIDCONVO = 'supportsMidConvoSystemMessages';
 const MIDCONVO_MODELS = ['chat:deepseek-v4.1-flash', 'chat:deepseek-v4-pro'];
 
-function findPiAiCatalogs() {
+export function findPiAiCatalogs({ entry = process.argv[1], root = ROOT } = {}) {
+  // 主程序与DSH_HOME可以分离；优先识别当前CLI所属的DSH包，不猜个人安装路径。
+  if (entry && existsSync(entry)) {
+    let directory = dirname(realpathSync(entry));
+    while (true) {
+      const manifest = join(directory, 'package.json');
+      try {
+        if (existsSync(manifest) && JSON.parse(readFileSync(manifest, 'utf8')).name === '@deepseek-ai/dsh') {
+          const catalog = join(directory, 'node_modules', '@earendil-works', 'pi-ai', 'dist', 'providers', 'data', 'opencode-go.json');
+          if (existsSync(catalog)) return [catalog];
+        }
+      } catch { /* 不把无关或损坏的package.json当作宿主安装。 */ }
+      const parent = dirname(directory);
+      if (parent === directory) break;
+      directory = parent;
+    }
+  }
+  const ROOT = root;
   if (!ROOT) return [];
   const found = new Set();
   // 直接路径：dsh/node_modules/@earendil-works/pi-ai/...
@@ -52,6 +69,8 @@ function applyMidconvo() {
       touched += 1;
     }
     if (!touched) continue;
+    const backup = file + '.lease-wrx-midconvo-backup';
+    if (!existsSync(backup)) writeFileSync(backup, raw, { flag: 'wx' });
     writeFileSync(file, JSON.stringify(data), 'utf8');
     changed += touched;
   }

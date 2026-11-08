@@ -8,6 +8,8 @@ app/integrations/dsh/compat.js提供管理页的检查和应用能力，定位op
 
 此功能属于WRX，不需要额外本机补丁插件。模型catalog升级后应重新检查。它不保证远端供应商一定支持中间system，也不代表已测量缓存命中。
 
+主程序与用户目录分离时，兼容检测优先沿当前CLI入口识别实际DSH安装包。应用catalog修改前保存原件。若profile对模型另有显式配置，可以在对应模型的compat下设置`supportsMidConvoSystemMessages: true`；这需要下面的适配器配置能力已开放。只对实际支持的模型开启，不给所有供应商默认启用。
+
 ## DSH适配器能力开放
 
 若DSH将该能力标为withhold，scripts/install-pi-ai-capability.mjs可显式开放配置入口：

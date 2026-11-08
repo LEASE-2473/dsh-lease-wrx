@@ -24,7 +24,7 @@ export function searchMemories(characterId, query, limit = 3) {
       .all(characterId, ...terms.map((t) => '%' + t + '%'), max);
     for (const row of rows) {
       if (out.length >= max) break;
-      out.push({ kind: src.kind, id: row.id, text: String(row.text || '').replace(/\s+/g, ' ').trim().slice(0, 400) });
+      out.push({ kind: src.kind, id: row.id, text: String(row.text || '').replace(/\s+/g, ' ').trim() });
     }
   }
   return out;

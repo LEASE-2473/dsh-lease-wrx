@@ -22,6 +22,8 @@
       <label id="history-duration-field" hidden>最近多少分钟 <input id="history-duration" type="number" min="1" max="525600" value="60"></label>
       <label id="history-since-field" hidden>起始时间（本地时区） <input id="history-since" type="datetime-local"></label>
       <label class="inline"><input id="timestamps-enabled" type="checkbox">在真实用户消息前显示原始时间</label>
+      <label class="inline"><input id="exclude-model-selection" type="checkbox">排除模型切换通知</label>
+      <p class="hint">统一编排启用时，不向模型发送 DSH 的模型切换通知；会话原记录保留。按当前角色保存，下一次新输入生效，预览使用当前勾选状态。</p>
       <label>消息时间时区 <input id="timestamps-zone" type="text" placeholder="Asia/Shanghai"></label>
       <label>历史中间的系统消息 <select id="mid-system"><option value="preserve">保留原角色与位置</option><option value="user">转为 user 角色以兼容消息顺序</option></select></label>
       <p class="hint">部分供应商会把中间的系统消息合并到开头。选择转为 user 可避免系统消息合并，但会降低这些条目的指令优先级；仍需核验供应商最终请求。</p>

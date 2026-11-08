@@ -46,19 +46,6 @@ export function stripAppCalls(text) {
     .trim();
 }
 
-export function trimMessages(messages, maxEach = 3000, maxTotal = 120000) {
-  const out = [];
-  let total = 0;
-  for (let i = messages.length - 1; i >= 0; i--) {
-    const m = messages[i];
-    const content = String(m.content || '').slice(0, maxEach);
-    if (total + content.length > maxTotal && out.length > 0) break;
-    out.push({ ...m, content });
-    total += content.length;
-  }
-  return out.reverse();
-}
-
 export function isContextOverflow(error) {
   const text = String(error?.message || '') + ' ' + String(error?.code || '')
   return /context_length_exceeded|context window|maximum context|too many tokens|token.{0,30}(exceed|limit)|上下文.{0,15}(超限|超过)/i.test(text)

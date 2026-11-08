@@ -135,6 +135,7 @@ function renderDshSections() {
   const deletionRows = ordered(preset).filter(({ entry, order }) => entry.operation === 'delete' && entry.enabled !== false && order.enabled !== false);
   const excluded = new Set([...(preset.dsh_prompt?.excluded ?? []), ...deletionRows.filter(({ entry }) => entry.delete_mode === 'section').map(({ entry }) => entry.target)]);
   const full = ordered(preset).some(({ entry, order }) => entry.source === 'dsh.full' && entry.enabled !== false && order.enabled !== false);
+  $('use-dsh-full').textContent = full ? '定位已启用的 DSH 全文条目' : preset.prompts.some(entry => entry.source === 'dsh.full') ? '启用并定位 DSH 全文条目' : '添加 DSH 全文条目';
   $('dsh-full-status').textContent = `${full ? '全文条目已启用' : '当前使用原有加法编排'}；最近请求 ${sections.length} 个分块，${deletionRows.length} 条启用的删除规则。修改后需保存预设。`;
   $('dsh-section-names')?.remove(); const namesList = make('datalist'); namesList.id = 'dsh-section-names';
   for (const section of sections) { const option = make('option'); option.value = section.sectionName; namesList.append(option); } document.body.append(namesList);
@@ -184,13 +185,26 @@ $('add-delete-entry').onclick = () => {
 $('use-dsh-full').onclick = () => {
   const preset = current(); if (!preset) return;
   let entry = preset.prompts.find(p => p.source === 'dsh.full');
+  const existed = Boolean(entry);
+  let modified = false;
   if (!entry) {
     entry = { identifier: uid('dsh-full'), name: 'DSH 原生提示词全文（按块剔除）', role: 'system', enabled: true, source: 'dsh.full', content: '' };
     preset.prompts.push(entry); preset.prompt_order.unshift({ identifier: entry.identifier, enabled: true });
+    modified = true;
   } else {
-    entry.enabled = true; preset.prompt_order.find(p => p.identifier === entry.identifier).enabled = true;
+    const order = ordered(preset).find(row => row.entry === entry).order;
+    modified = entry.enabled === false || order.enabled === false;
+    entry.enabled = true; order.enabled = true;
   }
-  changed(); renderEntries(); renderDshSections();
+  if (modified) changed();
+  renderEntries();
+  const card = [...$('entries').children].find(node => node.dataset.identifier === entry.identifier);
+  card.querySelector('details').open = true;
+  card.scrollIntoView({ block: 'center' });
+  card.querySelector('input').focus({ preventScroll: true });
+  const message = !existed ? '已添加 DSH 全文条目，请保存预设。' : modified ? '已启用并定位已有的 DSH 全文条目，请保存预设。' : '已定位已有的 DSH 全文条目，未重复添加。';
+  notice(message, dirty ? 'dirty' : '');
+  $('dsh-full-status').textContent += ' ' + message;
 };
 function renderMacros() {
   $('macro-select').replaceChildren(...macros.map(m => { const option = make('option', m.label || m.name); option.value = m.name; return option; }));
@@ -247,7 +261,7 @@ $('preview').onclick = async () => { try { const history = JSON.parse($('preview
 function readHistoryConfig() {
   const timestamps = { enabled: $('timestamps-enabled').checked, timeZone: $('timestamps-zone').value.trim() || 'Asia/Shanghai' };
   try { new Intl.DateTimeFormat('zh-CN', { timeZone: timestamps.timeZone }); } catch { throw new Error('请输入有效的 IANA 时区，例如 Asia/Shanghai'); }
-  return { ...historyConfigFromFields({ enabled: $('enabled').checked, mode: $('history-mode').value, turns: $('history-turns').value, durationMinutes: $('history-duration').value, since: $('history-since').value }, savedConfig), timestamps, midConversationSystem: $('mid-system').value };
+  return { ...historyConfigFromFields({ enabled: $('enabled').checked, mode: $('history-mode').value, turns: $('history-turns').value, durationMinutes: $('history-duration').value, since: $('history-since').value }, savedConfig), timestamps, excludeModelSelection: $('exclude-model-selection').checked, midConversationSystem: $('mid-system').value };
 }
 function showHistoryWindow() {
   const mode = $('history-mode').value;
@@ -268,6 +282,7 @@ async function loadConfig() {
     $('history-turns').value = window.turns ?? value.historyTurns ?? 30;
     $('history-duration').value = window.durationMinutes ?? 60;
     $('history-since').value = toLocalDateTime(window.since);
+    $('exclude-model-selection').checked = value.excludeModelSelection === true;
     $('timestamps-enabled').checked = value.timestamps?.enabled === true;
     $('timestamps-zone').value = value.timestamps?.timeZone || 'Asia/Shanghai';
     $('mid-system').value = value.midConversationSystem === 'user' ? 'user' : 'preserve';

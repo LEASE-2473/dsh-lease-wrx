@@ -33,12 +33,12 @@
     {
       "name": "profile",
       "path": "profile/user/prompts/profile_summary.md",
-      "defaultSha256": "29158c2eddd05afe7da50d6b992325fc4d33ff22ad2c311979954f3bdada989b"
+      "defaultSha256": "aa2e76cb257165a3b6cb201cd4de669a52fa4170116ff494f0c0e3442a2df779"
     },
     {
       "name": "selfProfile",
       "path": "profile/assistant/prompts/profile_summary.md",
-      "defaultSha256": "a9f74cfa5343c9e1ad791f59860f1aeed134994a4802ace5bdfc00cdeeefecae"
+      "defaultSha256": "272b31ca090fb3bc265fc3efb4ee047083a4c1cf0870867ce95f1b4c402cbf43"
     },
     {
       "name": "skillPersona",

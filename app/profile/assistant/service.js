@@ -50,24 +50,17 @@ export async function runSelfProfileJob(ctx, { date, force = false } = {}) {
     }
   }
 
-  // 默认只读一天：读三天塞不下（2026-10-26 LEASE 点出来的）。超预算就从最早的整条丢，
-  // 最新的必须保住——不然写出来的是三天前的人。
+  // 按配置时间窗口读取完整对话，不按字符预算丢弃记录；超出模型能力时失败并保留原画像。
   const days = Math.max(1, Math.min(7, Number(cfg.selfProfile?.days) || 1));
   const end = new Date();
   const start = new Date(end.getTime() - days * 86400000);
   const raw = readChatLog(start.toISOString(), end.toISOString(), roleId() || cfg.dshCharacters[0])
     .filter((r) => String(r.content || '').trim());
-  // 这个通道的 contextWindow 是 1M token（cordis.patch.yml 里写着），中文字 ≈ 1 token。
-  // 预算给到六十万字符（六成），剩下的留给输出、系统提示和长文变慢的余地。
-  const budget = Math.max(4000, Number(cfg.selfProfile?.maxChars) || 600000);
-  let used = 0;
   const rows = [];
   for (let i = raw.length - 1; i >= 0; i -= 1) {
     const r = raw[i];
-    const line = (r.role === 'user' ? (cfg.user?.name || '用户') + '：' : '助手：') + String(r.content).slice(0, 300);
-    if (used + line.length > budget) break;
+    const line = (r.role === 'user' ? (cfg.user?.name || '用户') + '：' : '助手：') + String(r.content);
     rows.unshift({ line });
-    used += line.length;
   }
   if (!rows.length) {
     writeJobByKey(key, { status: 'empty', at: new Date().toISOString() });
@@ -87,14 +80,16 @@ export async function runSelfProfileJob(ctx, { date, force = false } = {}) {
     ].join('\n');
 
     const text = await complete(ctx, cfg, {
-      system: selfPrompt(cfg),
+      system: selfPrompt(cfg) + '\n\n【画像完整性优先】完整保留所有仍有效的事实及必要限定。不设字数、条数或关键词数量上限；不得为长度或 token 预算省略、截断旧资料或新事实。只在有明确依据时纠正或合并，返回完整画像。',
       messages: [{ role: 'user', text: input }],
       // 不设输出上限（0 = 交给服务端默认）。3072 和 8192 都被 reasoning 吃光过，
       // 学 WRX 的画像总结：不硬设。
-      maxTokens: Number(cfg.selfProfile?.maxTokens) || 0,
+      maxTokens: 0,
+      requireComplete: true,
     });
     const parsed = extractJson(text);
     if (!Array.isArray(parsed?.entries)) throw new Error('角色画像输出缺少 entries：' + String(text || '').slice(0, 200));
+    if (parsed.entries.some(e => !e || typeof e.content !== 'string' || !e.content.trim())) throw new Error('角色画像条目正文无效，保留原画像');
 
     // 关键词跟用户画像必须同构——少这一行，每天跑完一次就把 keywords 抹掉了。
     // 模型偷懒没给 keywords 时，退回去用同 tag 的旧关键词，别自己把自己掏空。
@@ -104,16 +99,15 @@ export async function runSelfProfileJob(ctx, { date, force = false } = {}) {
     }
     const entries = parsed.entries
       .filter((e) => e && typeof e.content === 'string' && e.content.trim())
-      .slice(0, 12)
       .map((e) => {
         const tag = String(e.tag || '').trim() || '状态';
         const keywords = Array.isArray(e.keywords)
-          ? e.keywords.map((w) => String(w).trim()).filter(Boolean).slice(0, 6)
+          ? e.keywords.map((w) => String(w).trim()).filter(Boolean)
           : [];
         return {
           tag,
           keywords: keywords.length ? keywords : (oldByTag.get(tag) || []),
-          content: String(e.content).trim().slice(0, 200),
+          content: e.content,
         };
       });
 

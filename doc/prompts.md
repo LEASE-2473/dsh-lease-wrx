@@ -1,10 +1,10 @@
 # 后台提示词管理
 
-后台任务与技能实际使用的正文来自 app 对应功能模块的 prompts/*.md。JS 通过 app/memory/common/prompt_files.js 的相对路径白名单读取，每次任务读取配置时重新加载；页面保存也写入同一个 Markdown 文件。JSON API 返回的 prompts 仅是读写传输对象，不保存到 data/config.json。
+后台任务与技能实际使用的正文按顺序读取：运行目录 prompts/active/ 的用户保存稿、prompts/defaults/ 的用户目录默认稿、安装包 defaults/prompts/ 的默认稿。相对路径见下表。读取时只为缺失的用户默认稿补一份安装默认稿，不创建或覆盖用户保存稿；点击保存才写入active。JS通过app/memory/common/prompt_files.js白名单即时读写，不再把用户修改写进node_modules。升级旧安装前须先保存或迁出包内自定义稿；不自动采用旧prompts下其他同名稿。JSON API中的prompts是传输对象，不存入config.json。
 
-defaults/prompts/ 按同一相对目录保存15份独立默认稿，包含通用后台任务协议及整理指令。页面不能改写默认目录。GET /prompts/defaults 只读默认稿；POST /prompts/reset 读取默认稿并立即覆盖 app Markdown，刷新页面仍保持恢复结果。全部15份后台提示词均可在设置页编辑，包括角色画像、即时日记与分段合并指令。
+defaults/prompts/ 按同一相对目录保存15份独立默认稿，包含通用后台任务协议及整理指令。页面不能改写默认目录。GET /prompts/defaults 只读默认稿；只有显式调用 POST /prompts/reset 才用默认稿覆盖运行正文。全部15份后台提示词均可在设置页编辑，包括角色画像、即时日记与分段合并指令。
 
-| 功能 | 相对于 app 的目录或文件 |
+| 功能 | 相对于用户活动稿／默认稿根目录的路径 |
 | --- | --- |
 | 四表提取、更新、总结合并 | memory/system_memory/prompts/{system,system_update,merge}.md |
 | 每日日记、即时日记、即时合并 | memory/diaries/prompts/{diary,diary_instant,diary_merge}.md |

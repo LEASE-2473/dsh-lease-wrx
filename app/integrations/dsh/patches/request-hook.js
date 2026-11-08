@@ -6,12 +6,25 @@ function once(source, anchor) {
 }
 
 export function patchRequestHook(source) {
-  if (source.includes(PATCH_MARK)) return { changed: false, source };
+  const cwd = 'cwd: (session.log ?? []).reduce((value, event) => event?.type === "working-directory/change" ? event.data.cwd : value, session.header?.cwd),';
+  const previousCwd = 'cwd: this.ctx?.workingDirectory?.get?.(session) ?? session.header?.cwd,';
+  const position = 'position, assembly: this.leaseWrxAssembly,';
+  if (source.includes(PATCH_MARK)) {
+    if (source.includes(cwd)) return { changed: false, source };
+    if (source.includes(previousCwd)) {
+      once(source, previousCwd);
+      return { changed: true, source: source.replace(previousCwd, cwd) };
+    }
+    once(source, position);
+    return { changed: true, source: source.replace(position, `${cwd}\n            ${position}`) };
+  }
   const assembly = 'const { assembly } = decision;';
-  const derived = 'const derivedMessages = session.deriveMessages();';
-  const freeze = 'for (const message of derivedMessages) {';
-  const frozen = 'Object.freeze(derivedMessages);';
-  const output = 'messages: derivedMessages,';
+  const nativeBoundary = source.includes('const boundaryMessages = session.deriveMessages();');
+  const messageVariable = nativeBoundary ? 'boundaryMessages' : 'derivedMessages';
+  const derived = `const ${messageVariable} = session.deriveMessages();`;
+  const freeze = `for (const message of ${messageVariable}) {`;
+  const frozen = `Object.freeze(${messageVariable});`;
+  const output = `messages: ${messageVariable},`;
   for (const anchor of [assembly, derived, freeze, frozen, output]) once(source, anchor);
   const render = `${assembly}
         this.leaseWrxAssembly = { ...assembly, contexts: renderContextSections(assembly), sections: assembly.sections.map(section => ({ ...section, text: renderPrompt({ ...assembly, sections: [section] }) })) };`;
@@ -33,6 +46,7 @@ export function patchRequestHook(source) {
             sessionLog: session.log, surfaceNodes: session.surface?.nodes,
             provider: config.provider, model: config.model, tools: header.tools ?? [], toolHistory: session.toolHistory(),
             agentPreset, sessionId: session.id, parentSession: session.header?.parentSession,
+            ${cwd}
             position, assembly: this.leaseWrxAssembly,
           });
           if (!Array.isArray(transformed)) throw new Error("LEASE WRX transform must return messages");
@@ -41,10 +55,10 @@ export function patchRequestHook(source) {
         for (const message of boundaryMessages) {`;
   return {
     changed: true,
-    source: source.replace(assembly, render)
-      .replace(derived, `${derived}\n        let boundaryMessages = derivedMessages;`)
+    source: source.replace(output, '...leaseWrxGenerationOptions, messages: boundaryMessages,')
+      .replace(assembly, render)
+      .replace(derived, nativeBoundary ? 'let boundaryMessages = session.deriveMessages();' : `${derived}\n        let boundaryMessages = derivedMessages;`)
       .replace(freeze, handoff)
-      .replace(frozen, 'Object.freeze(boundaryMessages);')
-      .replace(output, '...leaseWrxGenerationOptions, messages: boundaryMessages,'),
+      .replace(frozen, 'Object.freeze(boundaryMessages);'),
   };
 }

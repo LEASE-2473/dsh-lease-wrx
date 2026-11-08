@@ -22,14 +22,14 @@ for (const prompt of activePrompts) {
   assert.ok(readFileSync(join(root, 'app', prompt.path), 'utf8').trim(), prompt.path);
 }
 assert.equal(sha(readFileSync(join(root, 'app/preset/defaults/presets.json'))), sha(readFileSync(join(root, 'defaults/presets.json'))));
-assert.equal(Object.keys(readDefaultPromptSet()).length, Object.keys(PROMPT_FILES).length);
+assert.equal(Object.keys(readDefaultPromptSet({ useUserDirectory: false })).length, Object.keys(PROMPT_FILES).length);
 console.log('PASS 空预设库一致、默认提示词哈希与可编辑模块文件清单');
 
 const presets = readJson(join(root, 'defaults/presets.json'));
 assert.deepEqual(presets, { presets: [], active_preset_id: '' });
 
 
-assert.ok(Object.values(readPromptSet()).every(prompt => typeof prompt === 'string' && prompt.trim()));
+assert.ok(Object.values(readPromptSet({ promptRoot: join(root, 'app') })).every(prompt => typeof prompt === 'string' && prompt.trim()));
 
 const temp = mkdtempSync(join(tmpdir(), 'lease-wrx-init-'));
 try {
